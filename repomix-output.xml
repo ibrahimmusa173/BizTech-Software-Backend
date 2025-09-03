@@ -1,0 +1,2872 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.eslintrc.cjs
+.gitattributes
+.gitignore
+App.css
+package.json
+postcss.config.js
+public/index.html
+public/vite.svg
+README.md
+src/App.jsx
+src/assets/react.svg
+src/Components/Common/Main.jsx
+src/Components/Common/Slider.jsx
+src/Components/Footer/Footer.jsx
+src/Components/Header/Header.jsx
+src/index.css
+src/index.js
+src/mvc/back/config/db.config.js
+src/mvc/back/controllers/auth.controller.js
+src/mvc/back/controllers/product.controller.js
+src/mvc/back/controllers/user.controller.js
+src/mvc/back/middleware/auth.middleware.js
+src/mvc/back/models/db.js
+src/mvc/back/models/product.model.js
+src/mvc/back/models/user.model.js
+src/mvc/back/routes/auth.routes.js
+src/mvc/back/routes/product.routes.js
+src/mvc/back/routes/public.routes.js
+src/mvc/back/routes/user.routes.js
+src/mvc/back/server.js
+src/Pages/Authentication/AuthContext.jsx
+src/Pages/Authentication/DataFetch.jsx
+src/Pages/Authentication/DataPost.jsx
+src/Pages/Authentication/ForgotPasswordPage.jsx
+src/Pages/Authentication/LoginPage.jsx
+src/Pages/Authentication/PrivateRoute.jsx
+src/Pages/Authentication/ProductUpdate.jsx
+src/Pages/Authentication/RegisterPage.jsx
+src/Pages/Authentication/ResetPasswordPage.jsx
+src/Pages/Authentication/UserUpdate.jsx
+src/Pages/DataView/DataView.jsx
+src/Pages/Generals/Home.jsx
+src/Pages/Generals/Putdata.jsx
+src/Pages/Team/Main1.jsx
+src/Pages/Team/Team.jsx
+src/Pages/UtilityStore/History.jsx
+src/Pages/UtilityStore/Leadership.jsx
+src/Pages/UtilityStore/Offering.jsx
+src/Pages/UtilityStore/Products.jsx
+src/Pages/UtilityStore/UtilityStore.jsx
+tailwind.config.js
+vite.config.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".eslintrc.cjs">
+module.exports = {
+  root: true,
+  env: {
+    browser: true,
+    node: true,         // ✅ Add this line
+    es2020: true
+  },
+  extends: [
+    'eslint:recommended',
+    'plugin:react/recommended',
+    'plugin:react/jsx-runtime',
+    'plugin:react-hooks/recommended',
+  ],
+  ignorePatterns: ['dist', '.eslintrc.cjs'],
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module'
+  },
+  settings: {
+    react: {
+      version: '18.2'
+    }
+  },
+  plugins: ['react-refresh'],
+  rules: {
+    'react-refresh/only-export-components': [
+      'warn',
+      { allowConstantExport: true },
+    ],
+  },
+};
+</file>
+
+<file path=".gitattributes">
+# Auto detect text files and perform LF normalization
+* text=auto
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
+<file path="App.css">
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "practice",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.10.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.2",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.14.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.56.4",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.6.1",
+    "react-scripts": "5.0.1",
+    "redux": "^5.0.1",
+    "sql": "^0.78.0",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "server": "nodemon src/mvc/back/server.js",
+    "server:prod": "node src/mvc/back/server.js",
+    "dev": "concurrently \"npm run server\" \"npm run start\"",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.8",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "nodemon": "^3.1.10",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^3.4.1"
+  }
+}
+</file>
+
+<file path="postcss.config.js">
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+</file>
+
+<file path="public/index.html">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>Vite + React</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="public/vite.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
+</file>
+
+<file path="README.md">
+# React + Vite + TailWindCSS - A Template Repo
+
+It is a template repository for you to start a project using React and TailwindCSS. You just need to create a new repository from this template repo by clicking the button at the top right corner of this page.
+
+## Watch This Video
+
+https://www.youtube.com/watch?v=Zk2YJUvfsOA
+
+## Links
+
+- Install Node.js: https://nodejs.org/en
+- Install Vite: https://vitejs.dev/
+- TailwindCSS: https://tailwindcss.com/
+- How to Learn TailwindCSS?: https://www.youtube.com/shorts/BhasK2BPn8c
+</file>
+
+<file path="src/App.jsx">
+// src/App.jsx
+
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './Pages/Authentication/AuthContext'; 
+import PrivateRoute from './Pages/Authentication/PrivateRoute';
+
+// --- Your Page Imports ---
+import UtilityStore from './Pages/UtilityStore/UtilityStore';
+import Team from './Pages/Team/Team';
+import DataView from './Pages/DataView/DataView';
+import LoginPage from './Pages/Authentication/LoginPage';
+import RegisterPage from './Pages/Authentication/RegisterPage';
+import DataFetch from './Pages/Authentication/DataFetch';
+import DataPost from './Pages/Authentication/DataPost';
+import UserUpdate from './Pages/Authentication/UserUpdate';
+import ForgotPasswordPage from './Pages/Authentication/ForgotPasswordPage';
+import ResetPasswordPage from './Pages/Authentication/ResetPasswordPage';
+import ProductUpdate from './Pages/Authentication/ProductUpdate'; // <-- 1. IMPORT THE NEW COMPONENT
+
+// --- Layout Component Imports ---
+import Header from './Components/Header/Header';
+import Footer from './Components/Footer/Footer';
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <Header />
+        <div className="main-content" style={{ minHeight: '80vh' }}>
+          <Routes>
+            {/* ... (Your public routes remain the same) ... */}
+            <Route path="/" element={<UtilityStore />} />
+            <Route path="/UtilityStore" element={<UtilityStore />} />
+            <Route path="/Team" element={<Team />} />
+            <Route path="/Products" element={<DataView />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+
+            {/* ================================================= */}
+            {/*               PROTECTED ROUTES                    */}
+            {/* ================================================= */}
+            <Route path="/DataFetch" element={<PrivateRoute><DataFetch /></PrivateRoute>} />
+            <Route path="/DataPost" element={<PrivateRoute><DataPost /></PrivateRoute>} />
+            <Route path="/userUpdate/:id" element={<PrivateRoute><UserUpdate /></PrivateRoute>} />
+            
+            {/* --- 2. ADD THIS NEW ROUTE FOR EDITING PRODUCTS --- */}
+            <Route path="/edit-product/:id" element={<PrivateRoute><ProductUpdate /></PrivateRoute>} />
+            
+            <Route path="*" element={<h1>404: Page Not Found</h1>} />
+          </Routes>
+        </div>
+        <Footer />
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;
+</file>
+
+<file path="src/assets/react.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+</file>
+
+<file path="src/Components/Common/Main.jsx">
+function Main(){
+    return(
+        <div >
+            
+
+
+           
+              <div className="flex items-center justify-center text-center my-4">
+            <div className="font-medium  text-[100px]    border-4 rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            <p className="px-8 py-4 ">WE ARE <br /> OFFERING</p>
+            </div></div> 
+
+
+
+
+            <div className=" ">
+                <div className="  grid grid-cols-2 sm:grid-cols-4  ml-8 pl-8 mb-8 mt-4 ">
+                    <div className=" "> <img className="hover:animate-tilt-shaking h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Offering/snacks_&_spices.jpg" alt="" /></div>
+                    <div className=" "><img className="hover:animate-tilt-shaking h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Offering/rice_&_pulses.jpg" alt="" /></div>
+                    <div className=" "><img className="hover:animate-tilt-shaking h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Offering/home_cleaning.jpg" alt="" /></div>    
+                    <div className=" "><img className="hover:animate-tilt-shaking h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Offering/personal_hygiene.jpg" alt="" /></div>     
+                </div>
+             </div>
+
+
+
+
+
+
+
+            <div className="flex flex-row sm:flex-col justify-center items-center">
+            <div className="  sm:w-[700px] sm:flex sm:justify-center sm:items-center">
+                <div className=" sm:w-[50%]  "><img className="sm:h-[670px]  pb-2 hover:shadow-lg hover:shadow-indigo-300" src="images/History/p4r.jpg" alt="" /> </div>
+                <div className="sm:w-[50%]">
+                <h6 className="sm:pl-8 sm:pr-8 text-3xl font-semibold">Serving The Nation Through The Years!</h6> <br/>
+                <p className="sm:pl-8 sm:pr-8">Utility Stores Corporation was established in July 1971, by taking over 20 retail outlets from the Staff Welfare Organization. Passing through various stages of expansion and reorganization, the 4000 + Stores Corporation at present is operating 4000+ stores throughout the Country. We are committed to providing clean, graded, hygienically fit, unadulterated genuine food and non-food items to the public and especially to the poorer segments of the society, at comparatively cheaper rates than the market and to offer them a pleasant environment of mutual confidence while making their purchases.</p>
+                <button className="text-white bg-teal-600 px-4 py-2 mt-2 ml-8 rounded-md hover:bg-teal-500">Discover</button>
+                </div>
+            </div></div>
+            
+
+
+
+
+
+            <div className="flex items-center justify-center container mx-auto">
+                <div className="mb-2 mt-4 w-[60%]  hover:shadow-lg hover:shadow-indigo-300">
+                    <img src="images/Package/banner_4.jpg" alt="" />
+                </div>
+            </div>
+
+
+
+            
+            <div className="flex items-center justify-center ">
+            <div className="font-medium  text-[40px]    rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            <p className="px-32 py-12">Providing Clean, Graded, <br/> Hygienically Fit Product</p>
+            </div></div>
+
+
+
+
+             <div className="flex items-center justify-center">
+
+                <div className=" sm:w-[70%]  sm:flex items-center justify-center">
+                    <div className="sm:w-[33%] "> <img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p1.png" alt="" /></div>
+                    <div className="sm:w-[33%] "><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p2.png" alt="" /></div>
+                    <div className="sm:w-[33%] "><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p3.png" alt="" /></div>       
+                </div>
+             </div>
+
+
+
+             <div className="flex items-center justify-center mt-4 ">
+                <div className=" w-[70%] sm:flex items-center justify-center">
+                    <div className="w-[33%] flex items-center justify-center"> <img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p4.png" alt="" /></div>
+                    <div className="w-[33%] flex items-center justify-center"><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p5.png" alt="" /></div>
+                    <div className="w-[33%] flex items-center justify-center"><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p6.png" alt="" /></div>       
+                </div>
+             </div>
+
+
+
+             <div className="flex items-center justify-center mt-4">
+                <div className=" w-[55%] sm:flex  items-center justify-center">
+                    <div className="w-[50%] flex items-center justify-center"> <img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p7.png" alt="" /></div>
+                    <div className="w-[50%] flex items-center justify-center"><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p8.png" alt="" /></div>
+                          
+                </div>
+             </div>
+            
+
+
+
+
+
+
+
+             <div className="flex items-center justify-center mt-8 pt-8">
+            <div className=" text-[45px] m-4 px-4 py-6 border-4 rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            Utility Stores Corporation Leadership
+            </div></div>
+
+
+
+            <div className="flex items-center justify-center pt-8 mt-8">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm1.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Rana Tanveer Hussain </p> 
+               <p>Federal Minister for Industries & Production. </p>  </div> 
+            </div>
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm2.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Rana Tanveer Hussain </p> 
+               <p>Federal Minister for Industries & Production. </p>  </div> 
+            </div>
+
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm3.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl "> Rana Tanveer Hussain </p> 
+               <p>Federal Minister for Industries & Production. </p>  </div> 
+            </div>
+
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm4.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Rana Tanveer Hussain </p> 
+               <p>Federal Minister for Industries & Production. </p>  </div> 
+            </div>
+
+
+
+
+            <div className="flex items-center justify-center mt-8 pt-8">
+            <div className="text-center font-medium text-[40px] m-4 p-4 w-[60%]  border-4 rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            <p className="container mx-auto ">Our Strength</p>
+            </div></div>
+        
+          
+            
+        </div>
+    )
+}
+
+export default Main
+</file>
+
+<file path="src/Components/Common/Slider.jsx">
+import { useState, useEffect, useCallback } from 'react';
+
+export default function ImageSlider() {
+  // Array of image paths
+  const images = [
+    'images/Slider/banner_1.png',
+    'images/Slider/banner_2.png',
+    'images/Slider/banner_3.png'
+  ];
+
+  // State to track current image index
+  const [count, setCount] = useState(0);
+
+  // Use useCallback to memoize the next function
+  const next = useCallback(() => {
+    setCount(prevCount => 
+      prevCount === images.length - 1 ? 0 : prevCount + 1
+    );
+  }, [images.length]);
+
+  // Set up interval for automatic sliding
+  useEffect(() => {
+    const intervalId = setInterval(next, 1000);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [next]); // Add next to the dependency array
+
+  return (
+    <div className="flex items-center justify-center  ">
+    <div className="slider-container border-4  w-[85%]  rounded-xl animate-color-animate" >
+      <img 
+        
+        id="slider" 
+        src={images[count]} 
+        alt={`Slide ${count + 1}`} 
+        className="w-full h-auto duration-300 rounded-xl"
+      />
+    </div></div>
+  );
+}
+</file>
+
+<file path="src/Components/Footer/Footer.jsx">
+function Footer() {
+    return (
+        <div className=" bottom-0 w-full">
+
+
+
+
+            <div className="border border-black  p-14 items-center justify-center bg-slate-900  grid sm:grid-cols-4">
+
+
+
+
+
+                <div className="py-4 text-white   pl-12 ">
+                    <h3 className="">Coliba!
+                    </h3>Lorem ipsum dolor <br /> sit amet consectetur <br />adipisicing elit.
+                    <div className="  flex flex-col sm:flex-row m-2 items-center">
+                        <i className="fa-brands fa-facebook scale-150  pt-3 hover:scale-[2] duration-300"></i>
+                        <i className="fa-brands fa-twitter scale-150 ml-4 pt-3 hover:scale-[2] duration-300"></i>
+                        <i className="fa-brands fa-linkedin scale-150 ml-4 pt-3 hover:scale-[2] duration-300"></i>
+                        <i className="fa-brands fa-instagram scale-150 ml-4 pt-3 hover:scale-[2] duration-300"></i>
+                    </div>
+
+
+
+
+                </div>
+                <div className="py-4 text-white  pl-12 "> <h6>Quick Links:</h6>
+                    <a className="hover:text-stone-300" href="About">About</a> <br />
+                    <a className="hover:text-stone-300" href="Team">Team</a> <br />
+                    <a className="hover:text-stone-300" href="Products">Products</a> <br />
+                    <a className="hover:text-stone-300" href="Signin">SignIn</a> <br />
+                </div>
+
+
+
+
+                <div className="py-4 text-white   pl-12">
+                    <h6 className=" ">Overview!</h6>
+                    <a className="hover:text-stone-300" href="a">Themes</a> <br />
+                    <a className="hover:text-stone-300" href="a">Pricing</a> <br />
+                    <a className="hover:text-stone-300" href="a">Services</a> <br />
+                    <a className="hover:text-stone-300" href="a">Contact us</a> <br />
+                </div>
+
+
+
+
+
+
+                <div className="py-4 text-white  pl-12">
+
+                    <div>Have a Question?</div>
+
+                    <div><i className="fa-solid fa-location-dot"></i> 203 Fake st, <br /> Mountain View</div>
+
+                    <div><i className="fa-solid fa-phone mr-2"></i>+800-05599</div>
+
+                    <div><i className="fa-regular fa-paper-plane-top"></i>info@you.com</div>
+
+
+                </div>
+
+            </div>
+
+
+
+
+
+
+
+
+
+
+            <div className="flex items-center justify-center py-4 text-center  bg-zinc-300 border-t-4 border-lime-700 ">
+                <h3>Powered by  IT Department - The #1 Open Source eCommerce</h3>
+            </div>
+
+
+
+        </div>
+    )
+}
+
+export default Footer
+</file>
+
+<file path="src/Components/Header/Header.jsx">
+function Header(){
+    return(
+             <>
+
+             <div className=" flex flex-col items-center justify-center hover:scale-105 duration-500 bg-transparent ">
+
+        <div className=" flex flex-col  w-[80%] mt-4 p-2">
+
+
+            <div className=" flex justify-between">
+                <div className=" h-24 w-64 flex flex-col sm:flex-row items-center justify-around ">
+                    
+                
+            <div className="text-zinc-400 "> 
+                 <i className="fa-brands fa-facebook scale-150 text-zinc-600 hover:scale-[2] duration-300 pt-2"></i></div>
+               <i className="fa-brands fa-twitter scale-150 text-zinc-600 hover:scale-[2] duration-300 pt-2"></i>             
+                <i className="fa-brands fa-linkedin scale-150 text-zinc-600 hover:scale-[2] duration-300 pt-2"></i>
+                <i className="fa-brands fa-instagram scale-150 text-zinc-600 hover:scale-[2] duration-300 pt-2"></i>
+                </div>
+                
+
+
+                <div className=" h-24 w-64 flex items-center justify-center  shadow-sm mb-3 shadow-indigo-300 hover:border-4 border-amber-500 duration-200  "><img src="images/Header/utility_store.jpg" alt="" /></div>
+                <div className="hidden sm:block h-24 w-66 flex items-center justify-center ml-4 pt-8"> <i className="fa-solid fa-phone mr-2"></i> For Complains: 0800-05599</div>
+            </div>
+
+
+
+           <div className="border border-zinc-300 rounded-s-3xl rounded-r-3xl"> <div className="flex  rounded-s-3xl rounded-r-3xl hover:border border-blue-200 duration-300">
+                <input className="w-[91.5%] h-10 rounded-s-3xl p-4 " type="text" placeholder="Search Here..." />
+                <button className=" h-10 w-[8.5%] bg-blue-500 text-white rounded-r-3xl hover:bg-blue-400"><i className="fa-solid fa-magnifying-glass"></i></button>
+            </div> </div>
+
+
+
+
+                       
+            <div className=" my-4 flex items-center justify-center ">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 ">
+                <a className="flex items-center justify-center m-2 p-3 sm:mr-4 sm:ml-2 bg-amber-500 font-semibold rounded-md hover:bg-yellow-300 duration-300 hover:scale-105" href="/UtilityStore">About</a>
+                <a className="flex items-center justify-center m-2 p-3 sm:mr-4 bg-amber-500 font-semibold rounded-md hover:bg-yellow-300 duration-300 hover:scale-105 " href="/Team">Team</a>
+                <a className="flex items-center justify-center m-2 p-3 sm:mr-4 bg-amber-500 font-semibold rounded-md hover:bg-yellow-300 duration-300 hover:scale-105" href="/Products">Products</a>
+                <a className="flex items-center justify-center m-2 p-3 sm:mr-4 bg-amber-500 font-semibold rounded-md hover:bg-yellow-300 duration-300 hover:scale-105" href="/login">Sign in</a>
+            </div></div>
+
+
+           
+ 
+
+            
+        
+          
+
+        </div>
+        </div>
+
+        </>
+    )
+}
+
+export default Header
+</file>
+
+<file path="src/index.css">
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+</file>
+
+<file path="src/index.js">
+// import React from 'react'
+// import ReactDOM from 'react-dom/client'
+// import App from './App.jsx'
+// import './index.css'
+// import { BrowserRouter } from 'react-router-dom';
+
+// ReactDOM.createRoot(document.getElementById('root')).render(
+//   <React.StrictMode>
+//     <BrowserRouter>
+//     <App />
+//     </BrowserRouter>
+//   </React.StrictMode>,
+// )
+
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+// DO NOT import BrowserRouter here
+import App from './App.jsx';
+import './index.css';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+   {/* <BrowserRouter> */}
+    {/* <Provider store={store}> */}
+    <App />
+    {/* </Provider> */}
+    {/* </BrowserRouter>    */} 
+    
+  </React.StrictMode>,
+);
+</file>
+
+<file path="src/mvc/back/config/db.config.js">
+// config/db.config.js
+module.exports = {
+  HOST: "localhost",
+  USER: "root",
+  PASSWORD: "",
+  DB: "laravel" // Your database name
+};
+</file>
+
+<file path="src/mvc/back/controllers/auth.controller.js">
+// src/mvc/back/controllers/auth.controller.js - FINAL CORRECTED VERSION
+
+const User = require("../models/user.model.js");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+
+// Make sure to use an environment variable for this in production
+const JWT_SECRET = "your_super_secret_key_12345";
+
+// --- REGISTER A NEW USER ---
+exports.register = (req, res) => {
+    // 1. Validate the request
+    if (!req.body.email || !req.body.password || !req.body.name || !req.body.username) {
+        return res.status(400).send({ message: "Please provide all required fields." });
+    }
+
+    // 2. Create a User object with the data
+    const user = new User({
+        name: req.body.name,
+        username: req.body.username,
+        email: req.body.email,
+        password: req.body.password,
+    });
+
+    // 3. Call the model to save the user to the database
+    User.create(user, (err, data) => {
+        if (err) {
+            // Check for duplicate entry error from MySQL
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(409).send({ message: "Email or username already exists." });
+            }
+            // For any other error
+            console.error("DATABASE ERROR on register:", err);
+            return res.status(500).send({ message: "Error registering user." });
+        }
+        
+        // 4. Send a success response
+        res.status(201).send({ message: "User registered successfully!", user: data });
+    });
+};
+
+
+// --- LOGIN AN EXISTING USER ---
+exports.login = (req, res) => {
+    // 1. Validate the request
+    if (!req.body.email || !req.body.password) {
+        return res.status(400).send({ message: "Email and password are required." });
+    }
+
+    // 2. Find the user by email in the database
+    User.findByEmail(req.body.email, (err, user) => {
+        if (err) {
+            if (err.kind === "not_found") {
+                return res.status(401).send({ message: "Invalid email or password." });
+            }
+            return res.status(500).send({ message: "Error retrieving user." });
+        }
+
+        // 3. Compare the provided password with the stored hashed password
+        const passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
+        if (!passwordIsValid) {
+            return res.status(401).send({ message: "Invalid email or password." });
+        }
+
+        // 4. If password is valid, create a JWT token
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, {
+            expiresIn: 86400 // 24 hours
+        });
+
+        // 5. Send the successful response with the token
+        res.status(200).send({
+            message: "Login successful!",
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                username: user.username,
+            }
+        });
+    });
+};
+
+
+// --- You can add your forgotPassword and resetPassword functions here later ---
+// exports.forgotPassword = (req, res) => { ... };
+// exports.resetPassword = (req, res) => { ... };
+</file>
+
+<file path="src/mvc/back/controllers/product.controller.js">
+// src/mvc/back/controllers/product.controller.js - FINAL COMPLETE VERSION
+
+const Product = require("../models/product.model.js");
+// 'fs' and 'path' were removed as they were not used.
+
+// --- 1. CREATE A NEW PRODUCT ---
+exports.create = (req, res) => {
+  if (!req.body.name || !req.body.price || !req.file) {
+    res.status(400).send({ message: "All fields, including an image, are required!" });
+    return;
+  }
+
+  // Use the filename provided by multer and prepend the 'uploads/' directory path.
+  const imageUrl = 'uploads/' + req.file.filename;
+
+  const product = new Product({
+    name: req.body.name,
+    category: req.body.category,
+    price: req.body.price,
+    imageUrl: imageUrl // Store the clean, relative path
+  });
+
+  Product.create(product, (err, data) => {
+    if (err) {
+      res.status(500).send({
+        message: err.message || "An error occurred while creating the Product."
+      });
+    } else {
+      res.status(201).send(data);
+    }
+  });
+};
+
+// --- 2. FIND ALL PRODUCTS ---
+exports.findAll = (req, res) => {
+  Product.getAll((err, data) => {
+    if (err) {
+      res.status(500).send({
+        message: err.message || "An error occurred while retrieving products."
+      });
+    } else {
+      res.send(data);
+    }
+  });
+};
+
+// --- 3. FIND A SINGLE PRODUCT BY ID ---
+exports.findOne = (req, res) => {
+  Product.findById(req.params.id, (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({ message: `Not found Product with id ${req.params.id}.` });
+      } else {
+        res.status(500).send({ message: "Error retrieving Product with id " + req.params.id });
+      }
+    } else {
+      res.send(data);
+    }
+  });
+};
+
+// --- 4. UPDATE A PRODUCT BY ID ---
+exports.update = (req, res) => {
+  if (!req.body) {
+    return res.status(400).send({ message: "Data to update can not be empty!" });
+  }
+
+  // Use the Product model's constructor to create an object with the new data
+  const productData = new Product({
+    name: req.body.name,
+    category: req.body.category,
+    price: req.body.price,
+  });
+  
+  // If a new image was uploaded, add its path to the update data
+  if (req.file) {
+    // Note: req.file.path might include backslashes on Windows. 
+    // It's good practice to normalize it.
+    productData.imageUrl = req.file.path.replace(/\\/g, "/");
+  }
+  
+  Product.updateById(req.params.id, productData, (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({ message: `Not found Product with id ${req.params.id}.` });
+      } else {
+        res.status(500).send({ message: "Error updating Product with id " + req.params.id });
+      }
+    } else {
+      res.send(data);
+    }
+  });
+};
+
+// --- 5. DELETE A PRODUCT ---
+exports.delete = (req, res) => {
+  // We only need the 'err' parameter from the callback, so we omit the second one.
+  Product.remove(req.params.id, (err) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({
+          message: `Not found Product with id ${req.params.id}.`
+        });
+      } else {
+        res.status(500).send({
+          message: "Could not delete Product with id " + req.params.id
+        });
+      }
+    } else {
+      res.send({ message: `Product was deleted successfully!` });
+    }
+  });
+};
+</file>
+
+<file path="src/mvc/back/controllers/user.controller.js">
+// controllers/user.controller.js
+const User = require("../models/user.model.js"); // Corrected line
+
+// Create and Save a new User
+exports.create = (req, res) => {
+  if (!req.body || !req.body.name || !req.body.username || !req.body.email) {
+    return res.status(400).send({ message: "All fields are required." });
+  }
+
+  const user = new User({
+    name: req.body.name,
+    username: req.body.username,
+    email: req.body.email,
+  });
+
+  User.create(user, (err, data) => {
+    if (err)
+      res.status(500).send({ message: err.message || "Some error occurred while creating the User." });
+    else res.status(201).send({ message: "User registered successfully", data });
+  });
+};
+
+// ... the rest of your file remains the same ...
+
+// Retrieve all Users from the database.
+exports.findAll = (req, res) => {
+  User.getAll((err, data) => {
+    if (err)
+      res.status(500).send({ message: err.message || "Some error occurred while retrieving users." });
+    else res.send(data);
+  });
+};
+
+// Find a single User with an id
+exports.findOne = (req, res) => {
+  User.findById(req.params.id, (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({ message: `Not found User with id ${req.params.id}.` });
+      } else {
+        res.status(500).send({ message: "Error retrieving User with id " + req.params.id });
+      }
+    } else res.send(data);
+  });
+};
+
+// Update a User identified by the id in the request
+exports.update = (req, res) => {
+  if (!req.body) {
+    return res.status(400).send({ message: "Data to update can not be empty!" });
+  }
+
+  User.updateById(req.params.id, new User(req.body), (err, data) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({ message: `Not found User with id ${req.params.id}.` });
+      } else {
+        res.status(500).send({ message: "Error updating User with id " + req.params.id });
+      }
+    } else res.send({ message: "User updated successfully", data });
+  });
+};
+
+// Delete a User with the specified id in the request
+exports.delete = (req, res) => {
+  User.remove(req.params.id, (err) => {
+    if (err) {
+      if (err.kind === "not_found") {
+        res.status(404).send({ message: `Not found User with id ${req.params.id}.` });
+      } else {
+        res.status(500).send({ message: "Could not delete User with id " + req.params.id });
+      }
+    } else res.send({ message: `User was deleted successfully!` });
+  });
+};
+</file>
+
+<file path="src/mvc/back/middleware/auth.middleware.js">
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = "your_super_secret_key_12345"; // IMPORTANT: Use an environment variable for this
+
+const verifyToken = (req, res, next) => {
+  let token = req.headers["authorization"];
+
+  if (!token) {
+    return res.status(403).send({ message: "No token provided!" });
+  }
+
+  if (token.startsWith('Bearer ')) {
+    // Remove "Bearer " from string
+    token = token.slice(7, token.length);
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Unauthorized! Token is not valid." });
+    }
+    // Add user ID from token payload to the request object
+    req.userId = decoded.id; 
+    next();
+  });
+};
+
+module.exports = verifyToken;
+</file>
+
+<file path="src/mvc/back/models/db.js">
+// models/db.js
+const mysql = require("mysql");
+const dbConfig = require("../config/db.config.js");
+
+// Create a connection to the database
+const connection = mysql.createConnection({
+  host: dbConfig.HOST,
+  user: dbConfig.USER,
+  password: dbConfig.PASSWORD,
+  database: dbConfig.DB
+});
+
+// Open the MySQL connection
+connection.connect(error => {
+  if (error) throw error;
+  console.log("Successfully connected to the database.");
+});
+
+module.exports = connection;
+</file>
+
+<file path="src/mvc/back/models/product.model.js">
+// src/mvc/back/models/product.model.js - FINAL CORRECTED VERSION
+
+const sql = require("./db.js");
+
+// The constructor for the Product object
+const Product = function(product) {
+  // ========================== THE FIX ==========================
+  // The body of the constructor must assign properties from the
+  // 'product' parameter to the 'this' context.
+  // =============================================================
+  this.name = product.name;
+  this.category = product.category;
+  this.price = product.price;
+  this.imageUrl = product.imageUrl;
+};
+
+// Create a new Product in the database
+Product.create = (newProduct, result) => {
+  sql.query("INSERT INTO products SET ?", newProduct, (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(err, null);
+      return;
+    }
+    result(null, { id: res.insertId, ...newProduct });
+  });
+};
+
+// Retrieve all Products from the database
+Product.getAll = (result) => {
+  sql.query("SELECT * FROM products ORDER BY category, name", (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(err, null);
+      return;
+    }
+    result(null, res);
+  });
+};
+
+
+// --- YOUR NEW FUNCTIONS ---
+
+// Find a single Product by its ID
+Product.findById = (id, result) => {
+  sql.query(`SELECT * FROM products WHERE id = ${id}`, (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(err, null);
+      return;
+    }
+    if (res.length) {
+      result(null, res[0]);
+      return;
+    }
+    // If no product is found
+    result({ kind: "not_found" }, null);
+  });
+};
+
+// Update a product by its ID
+Product.updateById = (id, product, result) => {
+  let query = "UPDATE products SET name = ?, category = ?, price = ?";
+  const params = [product.name, product.category, product.price];
+
+  // Only add the imageUrl to the update query if a new one was provided
+  if (product.imageUrl) {
+    query += ", imageUrl = ?";
+    params.push(product.imageUrl);
+  }
+
+  query += " WHERE id = ?";
+  params.push(id);
+
+  sql.query(query, params, (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(err, null);
+      return;
+    }
+    if (res.affectedRows == 0) {
+      // No product was found with that ID
+      result({ kind: "not_found" }, null);
+      return;
+    }
+    result(null, { id: id, ...product });
+  });
+};
+
+// Delete a Product by its ID
+Product.remove = (id, result) => {
+  sql.query("DELETE FROM products WHERE id = ?", id, (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(err, null);
+      return;
+    }
+    if (res.affectedRows == 0) {
+      result({ kind: "not_found" }, null);
+      return;
+    }
+    result(null, res);
+  });
+};
+
+module.exports = Product;
+</file>
+
+<file path="src/mvc/back/models/user.model.js">
+const sql = require("./db.js");
+const bcrypt = require("bcryptjs");
+
+// Constructor
+const User = function(user) {
+  this.name = user.name;
+  this.username = user.username;
+  this.email = user.email;
+  if (user.password) {
+    this.password = user.password;
+  }
+};
+
+// --- AUTHENTICATION METHOD (Replaces old create) ---
+User.create = (newUser, result) => {
+  if (!newUser.password) {
+    result({ message: "Password is required for registration." }, null);
+    return;
+  }
+  // Hash the password before saving
+  newUser.password = bcrypt.hashSync(newUser.password, 8);
+
+  sql.query("INSERT INTO users SET ?", newUser, (err, res) => {
+    if (err) {
+      console.log("error: ", err);
+      result(err, null);
+      return;
+    }
+    // IMPORTANT: Do not return the password hash in the response
+    const userWithoutPassword = { ...newUser };
+    delete userWithoutPassword.password;
+    
+    result(null, { id: res.insertId, ...userWithoutPassword });
+  });
+};
+
+// Find a user by email (needed for login)
+User.findByEmail = (email, result) => {
+  sql.query(`SELECT * FROM users WHERE email = ?`, [email], (err, res) => {
+    if (err) {
+      result(err, null);
+      return;
+    }
+    if (res.length) {
+      result(null, res[0]);
+      return;
+    }
+    result({ kind: "not_found" }, null);
+  });
+};
+
+// --- PASSWORD RESET METHODS ---
+
+// Save reset token and expiry to the database for a user
+User.saveResetToken = (email, token, expire, result) => {
+    sql.query(
+        "UPDATE users SET resetPasswordToken = ?, resetPasswordExpire = ? WHERE email = ?",
+        [token, expire, email],
+        (err, res) => {
+            if (err) { result(err, null); return; }
+            if (res.affectedRows === 0) { result({ kind: "not_found" }, null); return; }
+            result(null, res);
+        }
+    );
+};
+
+// Find a user by a valid (non-expired) reset token
+User.findByResetToken = (token, result) => {
+    sql.query(
+        "SELECT * FROM users WHERE resetPasswordToken = ? AND resetPasswordExpire > NOW()",
+        [token],
+        (err, res) => {
+            if (err) { result(err, null); return; }
+            if (res.length) { result(null, res[0]); return; }
+            // If no user is found, or the token is expired, return "not_found"
+            result({ kind: "not_found" }, null);
+        }
+    );
+};
+
+// Update a user's password and clear the reset token
+User.updatePassword = (id, password, result) => {
+    const newHashedPassword = bcrypt.hashSync(password, 8);
+    sql.query(
+        "UPDATE users SET password = ?, resetPasswordToken = NULL, resetPasswordExpire = NULL WHERE id = ?",
+        [newHashedPassword, id],
+        (err, res) => {
+            if (err) { result(err, null); return; }
+            if (res.affectedRows === 0) { result({ kind: "not_found" }, null); return; }
+            result(null, res);
+        }
+    );
+};
+
+
+// --- CRUD METHODS (Remain the same but now only for authenticated users) ---
+
+User.findById = (id, result) => {
+  // Select only non-sensitive fields
+  sql.query(`SELECT id, name, username, email FROM users WHERE id = ${id}`, (err, res) => {
+    if (err) { result(err, null); return; }
+    if (res.length) { result(null, res[0]); return; }
+    result({ kind: "not_found" }, null);
+  });
+};
+
+User.getAll = (result) => {
+  // Select only non-sensitive fields
+  sql.query("SELECT id, name, username, email FROM users ORDER BY id DESC", (err, res) => {
+    if (err) { result(err, null); return; }
+    result(null, res);
+  });
+};
+
+User.updateById = (id, user, result) => {
+  sql.query(
+    "UPDATE users SET name = ?, username = ?, email = ? WHERE id = ?",
+    [user.name, user.username, user.email, id],
+    (err, res) => {
+      if (err) { result(err, null); return; }
+      if (res.affectedRows === 0) { result({ kind: "not_found" }, null); return; }
+      result(null, { id: id, ...user });
+    }
+  );
+};
+
+User.remove = (id, result) => {
+  sql.query("DELETE FROM users WHERE id = ?", id, (err, res) => {
+    if (err) { result(err, null); return; }
+    if (res.affectedRows === 0) { result({ kind: "not_found" }, null); return; }
+    result(null, res);
+  });
+};
+
+module.exports = User;
+</file>
+
+<file path="src/mvc/back/routes/auth.routes.js">
+const express = require("express");
+const router = express.Router();
+const auth = require("../controllers/auth.controller.js");
+
+router.post("/register", auth.register);
+router.post("/login", auth.login);
+
+module.exports = router;
+</file>
+
+<file path="src/mvc/back/routes/product.routes.js">
+// src/mvc/back/routes/product.routes.js - EDITED
+
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const products = require("../controllers/product.controller.js");
+const verifyToken = require('../middleware/auth.middleware.js');
+
+// ... (multer configuration remains the same)
+const storage = multer.diskStorage({ /* ... */ });
+const upload = multer({ storage: storage });
+
+// --- PUBLIC ROUTES ---
+router.get("/", products.findAll);
+router.get("/:id", products.findOne); // <-- ADD THIS: To get a single product for the edit form
+
+// --- PROTECTED ROUTES ---
+router.post("/", [verifyToken, upload.single('image')], products.create); 
+router.put("/:id", [verifyToken, upload.single('image')], products.update); // <-- ADD THIS: To update a product
+router.delete("/:id", [verifyToken], products.delete);
+
+module.exports = router;
+</file>
+
+<file path="src/mvc/back/routes/public.routes.js">
+const express = require("express");
+const router = express.Router();
+const users = require("../controllers/user.controller.js");
+
+router.get("/users", users.findAll);
+
+module.exports = router;
+</file>
+
+<file path="src/mvc/back/routes/user.routes.js">
+const express = require("express");
+const router = express.Router();
+const users = require("../controllers/user.controller.js");
+const verifyToken = require("../middleware/auth.middleware.js");
+
+router.get("/", [verifyToken], users.findAll);
+router.get("/:id", [verifyToken], users.findOne);
+router.put("/:id", [verifyToken], users.update);
+router.delete("/:id", [verifyToken], users.delete);
+
+module.exports = router;
+</file>
+
+<file path="src/mvc/back/server.js">
+const express = require("express");
+const cors = require("cors");
+const path = require('path'); // You MUST import the 'path' module to use path.join
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ===================================================================
+//  THE FIX: MAKE THE 'UPLOADS' FOLDER PUBLICLY ACCESSIBLE
+//
+//  This line tells Express: "If you receive a request that starts
+//  with '/uploads' in the URL, treat it as a request for a static file
+//  and look for it inside the physical folder located at path.join(__dirname, 'uploads')."
+//  __dirname is a Node.js variable that gives the path of the current file's directory.
+// ===================================================================
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
+// --- API ROUTES ---
+// Make sure these paths correctly point to your route files.
+const authRoutes = require("./routes/auth.routes.js");
+const productRoutes = require("./routes/product.routes.js");
+// If you have more routes, require them here.
+
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+// app.use('/api/users', userRoutes); // Add other routes if you have them
+
+
+// Set port and start the server
+const PORT = process.env.PORT || 7000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}.`);
+});
+</file>
+
+<file path="src/Pages/Authentication/AuthContext.jsx">
+import { createContext, useState, useContext, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
+const AuthContext = createContext(null);
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAuth = () => useContext(AuthContext);
+
+// Create a configured axios instance for protected routes
+const api = axios.create({
+  baseURL: 'http://localhost:7000/api'
+});
+
+// Use an interceptor to automatically add the auth token to requests
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
+
+export const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [token, setToken] = useState(localStorage.getItem('token'));
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser && token) {
+            setUser(JSON.parse(storedUser));
+        }
+    }, [token]);
+
+    const login = async (email, password) => {
+        const response = await axios.post('http://localhost:7000/api/auth/login', { email, password });
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        setToken(response.data.token);
+        setUser(response.data.user);
+        navigate('/DataFetch'); // Navigate to user list after login
+        return response.data;
+    };
+
+    const register = async (userData) => {
+        return await axios.post('http://localhost:7000/api/auth/register', userData);
+    };
+
+    const logout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+        navigate('/login');
+    };
+
+    // --- ADDED PASSWORD RESET FUNCTIONS ---
+    const forgotPassword = async (email) => {
+        // This is a public endpoint, so we can use the global axios
+        return await axios.post('http://localhost:7000/api/auth/forgot-password', { email });
+    };
+
+    const resetPassword = async (token, password) => {
+        // This is also a public endpoint
+        return await axios.post(`http://localhost:7000/api/auth/reset-password/${token}`, { password });
+    };
+    
+    // Add the new functions to the 'value' object
+    const value = { 
+        user, 
+        token, 
+        isAuthenticated: !!token, 
+        login, 
+        logout, 
+        register, 
+        api,
+        forgotPassword, // <-- ADDED
+        resetPassword   // <-- ADDED
+    };
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired
+};
+</file>
+
+<file path="src/Pages/Authentication/DataFetch.jsx">
+// src/Pages/Authentication/DataFetch.jsx
+
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom"; // Link is already correctly imported
+import { useAuth } from "./AuthContext"; 
+import axios from 'axios';
+
+function DataFetch() {
+  const [products, setProducts] = useState([]);
+  const [error, setError] = useState('');
+  const { api, logout, user } = useAuth();
+
+  const fetchProducts = () => {
+    axios.get("http://localhost:7000/api/products") 
+      .then((response) => setProducts(response.data))
+      .catch((err) => {
+        console.error("Error fetching products:", err);
+        setError("Failed to load products.");
+      });
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const handleDelete = async (productId) => {
+    if (window.confirm("Are you sure you want to delete this product? This cannot be undone.")) {
+      try {
+        await api.delete(`/products/${productId}`);
+        alert("Product deleted successfully!");
+        fetchProducts();
+      } catch (error) {
+        const errorMessage = error.response?.data?.message || "Failed to delete product.";
+        console.error("Failed to delete product:", error);
+        alert(errorMessage);
+        if (error.response && error.response.status === 401) {
+            logout();
+        }
+      }
+    }
+  };
+
+  const getFullImageUrl = (imageUrl) => {
+    if (!imageUrl) return ''; // Handle case where imageUrl might be null or undefined
+    // Replace backslashes with forward slashes for URL compatibility
+    const correctedUrl = imageUrl.replace(/\\/g, '/');
+    return `http://localhost:7000/${correctedUrl}`;
+  };
+
+  return (
+    <div className="p-4 max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+            <h1 className="text-3xl font-bold">Product Dashboard</h1>
+            {user && <p className="text-gray-600">Welcome, {user.name}!</p>}
+        </div>
+        <div>
+          <Link to="/DataPost" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mr-2">
+            Add New Product
+          </Link>
+          <button onClick={logout} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+            Logout
+          </button>
+        </div>
+      </div>
+
+      {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border">
+            <thead className="bg-gray-100">
+                <tr>
+                    <th className="py-2 px-4 border-b">Image</th>
+                    <th className="py-2 px-4 border-b">Name</th>
+                    <th className="py-2 px-4 border-b">Category</th>
+                    <th className="py-2 px-4 border-b">Price</th>
+                    <th className="py-2 px-4 border-b">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {products.map((product) => (
+                    <tr key={product.id} className="text-center hover:bg-gray-50">
+                        <td className="py-2 px-4 border-b">
+                            <img src={getFullImageUrl(product.imageUrl)} alt={product.name} className="h-16 w-16 object-cover mx-auto rounded"/>
+                        </td>
+                        <td className="py-2 px-4 border-b">{product.name}</td>
+                        <td className="py-2 px-4 border-b">{product.category}</td>
+                        <td className="py-2 px-4 border-b">₹{parseFloat(product.price).toFixed(2)}</td>
+                        <td className="py-2 px-4 border-b space-x-2">
+                          
+                          {/* ======================================= */}
+                          {/*          THIS IS THE ONLY CHANGE          */}
+                          {/* ======================================= */}
+                          <Link 
+                            to={`/edit-product/${product.id}`} 
+                            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                          >
+                            Edit
+                          </Link>
+                          {/* ======================================= */}
+                          
+                          <button onClick={() => handleDelete(product.id)} className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
+                              Delete
+                          </button>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export default DataFetch;
+</file>
+
+<file path="src/Pages/Authentication/DataPost.jsx">
+// src/Pages/Authentication/DataPost.jsx - NEW VERSION
+
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "./AuthContext";
+
+const CATEGORIES = ["Ghee & Oil", "Rice & Pulses", "Snacks & Spices", "Cold Drinks"];
+
+function DataPost() {
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [image, setImage] = useState(null); // State to hold the file object
+  const [error, setError] = useState('');
+
+  const navigate = useNavigate();
+  const { api } = useAuth(); // Use the authenticated api instance
+
+  const createProduct = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!name || !price || !image) {
+      setError("Please fill in all fields and choose an image.");
+      return;
+    }
+
+    // FormData is required for sending files
+    const formData = new FormData();
+    formData.append('category', category);
+    formData.append('name', name);
+    formData.append('price', price);
+    formData.append('image', image); // The key 'image' must match the multer field name in the backend
+
+    try {
+      await api.post("/products", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      alert("New product added successfully!");
+      navigate("/DataFetch"); 
+
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Failed to add new product.";
+      console.error("Error creating product:", err);
+      setError(errorMessage);
+    }
+  };
+
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      <Link 
+        className="font-bold text-xl border border-black bg-yellow-400 px-4 py-2 mb-4 inline-block rounded" 
+        to="/DataFetch"
+      >
+        Back to Product Dashboard
+      </Link>
+      <h1 className="text-2xl mb-4">Add New Product</h1>
+      {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
+      
+      <form onSubmit={createProduct} className="space-y-4">
+        <div>
+          <label htmlFor="category" className="block text-sm font-medium text-gray-700">Choose Category</label>
+          <select 
+            id="category"
+            value={category} 
+            onChange={(e) => setCategory(e.target.value)}
+            className="border p-2 w-full rounded mt-1"
+            required
+          >
+            {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">Product Name</label>
+          <input 
+            id="name"
+            type="text" 
+            placeholder="e.g., Basmati Rice 1kg" 
+            value={name} 
+            onChange={(e) => setName(e.target.value)} 
+            className="border p-2 w-full rounded mt-1"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="price" className="block text-sm font-medium text-gray-700">Product Price</label>
+          <input 
+            id="price"
+            type="number" 
+            step="0.01"
+            placeholder="e.g., 150.50" 
+            value={price} 
+            onChange={(e) => setPrice(e.target.value)} 
+            className="border p-2 w-full rounded mt-1"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="image" className="block text-sm font-medium text-gray-700">Product Image</label>
+          <input 
+            id="image"
+            type="file" 
+            accept="image/*"
+            onChange={(e) => setImage(e.target.files[0])} 
+            className="border p-2 w-full rounded mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            required
+          />
+        </div>
+        
+        <button 
+          type="submit" 
+          className="bg-green-500 text-white px-4 py-2 rounded w-full hover:bg-green-600"
+        >
+          Add Product
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export default DataPost;
+</file>
+
+<file path="src/Pages/Authentication/ForgotPasswordPage.jsx">
+// src/Pages/Authentication/ForgotPasswordPage.jsx
+
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+
+function ForgotPasswordPage() {
+    const [email, setEmail] = useState('');
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+    const { forgotPassword } = useAuth();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setMessage('');
+        setError('');
+        try {
+            const response = await forgotPassword(email);
+            setMessage(response.data.message);
+        } catch (err) {
+            setError(err.response?.data?.message || 'An error occurred. Please try again.');
+        }
+    };
+
+    return (
+        <div className="p-4 max-w-md mx-auto mt-10">
+            <h1 className="text-3xl font-bold mb-6 text-center">Forgot Password</h1>
+            <p className="text-center text-gray-600 mb-4">Enter your email address and we will send you a link to reset your password.</p>
+            {message && <p className="bg-green-100 text-green-700 p-3 rounded mb-4">{message}</p>}
+            {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <input 
+                    type="email" 
+                    placeholder="Your Email Address" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    className="border p-2 w-full rounded" 
+                    required 
+                />
+                <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600">
+                    Send Reset Link
+                </button>
+            </form>
+            <div className="text-center mt-4">
+                <Link to="/login" className="text-blue-500 hover:underline">Back to Login</Link>
+            </div>
+        </div>
+    );
+}
+
+export default ForgotPasswordPage;
+</file>
+
+<file path="src/Pages/Authentication/LoginPage.jsx">
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+
+function LoginPage() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const { login } = useAuth();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        try {
+            await login(email, password);
+            // Navigation happens inside the login function upon success
+        } catch (err) {
+            setError(err.response?.data?.message || 'Login failed. Please try again.');
+        }
+    };
+
+    return (
+        <div className="p-4 max-w-md mx-auto mt-10">
+            <h1 className="text-3xl font-bold mb-6 text-center">Login</h1>
+            {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 w-full rounded" required />
+                <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="border p-2 w-full rounded" required />
+                <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600">Login</button>
+            </form>
+            
+            {/* --- LINK TO FORGOT PASSWORD (Added) --- */}
+            <div className="text-right mt-2">
+                <Link to="/forgot-password" className="text-sm text-blue-500 hover:underline">
+                    Forgot Password?
+                </Link>
+            </div>
+
+            <div className="text-center mt-4">
+                {/* Text corrected to use HTML entity for apostrophe */}
+                <Link to="/register" className="text-blue-500 hover:underline">Dont have an account? Register</Link>
+            </div>
+        </div>
+    );
+}
+
+export default LoginPage;
+</file>
+
+<file path="src/Pages/Authentication/PrivateRoute.jsx">
+import { Navigate, useLocation } from 'react-router-dom';
+import PropTypes from 'prop-types'; // FIX 2: Import PropTypes
+import { useAuth } from './AuthContext';
+
+const PrivateRoute = ({ children }) => {
+    const { isAuthenticated } = useAuth();
+    const location = useLocation();
+
+    if (!isAuthenticated) {
+        // Redirect them to the /login page, but save the current location they were
+        // trying to go to. This allows us to send them back after they log in.
+        return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    return children;
+};
+
+// FIX 2: Add prop-types validation for the 'children' prop
+PrivateRoute.propTypes = {
+    children: PropTypes.node.isRequired,
+};
+
+export default PrivateRoute;
+</file>
+
+<file path="src/Pages/Authentication/ProductUpdate.jsx">
+// src/Pages/Authentication/ProductUpdate.jsx - NEW FILE
+
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "./AuthContext";
+
+const CATEGORIES = ["Ghee & Oil", "Rice & Pulses", "Snacks & Spices", "Cold Drinks"];
+
+function ProductUpdate() {
+  const { id } = useParams(); // Get product ID from URL
+  const navigate = useNavigate();
+  const { api } = useAuth();
+
+  // State for form fields
+  const [category, setCategory] = useState('');
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [image, setImage] = useState(null); // For new image file
+  const [currentImageUrl, setCurrentImageUrl] = useState(''); // To display current image
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Fetch the existing product data when the component loads
+  useEffect(() => {
+    api.get(`/products/${id}`)
+      .then(response => {
+        const product = response.data;
+        setName(product.name);
+        setCategory(product.category);
+        setPrice(product.price);
+        setCurrentImageUrl(`http://localhost:7000/${product.imageUrl}`);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching product data:", err);
+        setError("Could not fetch product data.");
+        setLoading(false);
+      });
+  }, [id, api]);
+
+  const updateProduct = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    const formData = new FormData();
+    formData.append('category', category);
+    formData.append('name', name);
+    formData.append('price', price);
+    if (image) { // Only append image if a new one is selected
+      formData.append('image', image);
+    }
+
+    try {
+      // Use PUT request to update the product
+      await api.put(`/products/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      alert("Product updated successfully");
+      navigate("/DataFetch");
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Failed to update product.";
+      console.error("Error updating product:", err);
+      setError(errorMessage);
+    }
+  };
+
+  if (loading) return <div className="p-4 text-center">Loading...</div>;
+
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      <Link className="font-bold text-xl border border-black bg-yellow-400 px-4 py-2 mb-4 inline-block rounded" to="/DataFetch">
+        Back to Dashboard
+      </Link>
+      <h1 className="text-2xl mb-4">Edit Product</h1>
+      {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
+      
+      <form onSubmit={updateProduct} className="space-y-4">
+        {/* Form fields are similar to DataPost, but pre-filled with existing data */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Category</label>
+          <select value={category} onChange={(e) => setCategory(e.target.value)} className="border p-2 w-full rounded mt-1">
+            {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Product Name</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="border p-2 w-full rounded mt-1" required />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Product Price</label>
+          <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} className="border p-2 w-full rounded mt-1" required />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Current Image</label>
+          {currentImageUrl && <img src={currentImageUrl} alt="Current product" className="h-32 w-32 object-cover rounded mt-1" />}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Upload New Image (Optional)</label>
+          <input type="file" onChange={(e) => setImage(e.target.files[0])} className="border p-2 w-full rounded mt-1" />
+        </div>
+        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600">Update Product</button>
+      </form>
+    </div>
+  );
+}
+
+export default ProductUpdate;
+</file>
+
+<file path="src/Pages/Authentication/RegisterPage.jsx">
+import { useState } from 'react'; // FIX: 'React' was removed as it's not used
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+
+function RegisterPage() {
+    const [formData, setFormData] = useState({ name: '', username: '', email: '', password: '' });
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const { register } = useAuth();
+    const navigate = useNavigate();
+
+    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+        if (formData.password.length < 6) {
+             setError('Password must be at least 6 characters long.');
+             return;
+        }
+        try {
+            await register(formData);
+            setSuccess('Registration successful! Redirecting to login...');
+            setTimeout(() => navigate('/login'), 2000);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Registration failed.');
+        }
+    };
+
+    return (
+        <div className="p-4 max-w-md mx-auto mt-10">
+            <h1 className="text-3xl font-bold mb-6 text-center">Register</h1>
+            {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
+            {success && <p className="bg-green-100 text-green-700 p-3 rounded mb-4">{success}</p>}
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <input type="text" name="name" placeholder="Full Name" onChange={handleChange} className="border p-2 w-full rounded" required />
+                <input type="text" name="username" placeholder="Username" onChange={handleChange} className="border p-2 w-full rounded" required />
+                <input type="email" name="email" placeholder="Email" onChange={handleChange} className="border p-2 w-full rounded" required />
+                <input type="password" name="password" placeholder="Password" onChange={handleChange} className="border p-2 w-full rounded" required />
+                <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded w-full hover:bg-green-600">Register</button>
+            </form>
+            <div className="text-center mt-4">
+                <Link to="/login" className="text-blue-500 hover:underline">Already have an account? Login</Link>
+            </div>
+        </div>
+    );
+}
+export default RegisterPage;
+</file>
+
+<file path="src/Pages/Authentication/ResetPasswordPage.jsx">
+// src/Pages/Authentication/ResetPasswordPage.jsx
+
+import { useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+
+function ResetPasswordPage() {
+    const { token } = useParams(); // Gets the token from the URL
+    const navigate = useNavigate();
+    const { resetPassword } = useAuth();
+    
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
+        setError('');
+        setMessage('');
+
+        try {
+            const response = await resetPassword(token, password);
+            setMessage(response.data.message + " Redirecting to login...");
+            setTimeout(() => navigate('/login'), 3000); // Redirect to login after 3 seconds
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to reset password.');
+        }
+    };
+
+    return (
+        <div className="p-4 max-w-md mx-auto mt-10">
+            <h1 className="text-3xl font-bold mb-6 text-center">Reset Your Password</h1>
+            {message && <p className="bg-green-100 text-green-700 p-3 rounded mb-4">{message}</p>}
+            {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
+            {!message && ( // Hide form after successful submission
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <input 
+                        type="password" 
+                        placeholder="Enter new password" 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        className="border p-2 w-full rounded" 
+                        required 
+                    />
+                    <input 
+                        type="password" 
+                        placeholder="Confirm new password" 
+                        value={confirmPassword} 
+                        onChange={(e) => setConfirmPassword(e.target.value)} 
+                        className="border p-2 w-full rounded" 
+                        required 
+                    />
+                    <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded w-full hover:bg-green-600">
+                        Update Password
+                    </button>
+                </form>
+            )}
+             {message && (
+                <div className="text-center mt-4">
+                    <Link to="/login" className="text-blue-500 hover:underline">Go to Login Now</Link>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default ResetPasswordPage;
+</file>
+
+<file path="src/Pages/Authentication/UserUpdate.jsx">
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "./AuthContext"; // Import useAuth
+
+function UserUpdate() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { api } = useAuth(); // Get the authenticated api instance
+
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get(`/users/${id}`) // Use 'api' instance
+      .then(response => {
+        const user = response.data;
+        setName(user.name);
+        setUsername(user.username);
+        setEmail(user.email);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error("Error fetching user data:", error);
+        alert("Could not fetch user data.");
+        setLoading(false);
+      });
+  }, [id, api]); 
+
+  const updateUser = async (e) => {
+    e.preventDefault();
+    if (!name || !username || !email) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    try {
+      await api.put(`/users/${id}`, { name, username, email }); // Use 'api' instance
+      alert("User updated successfully");
+      navigate("/DataFetch");
+    } catch (error) {
+      console.error("Error updating user:", error);
+      alert("Failed to update user.");
+    }
+  };
+
+  if (loading) {
+    return <div className="p-4 text-center">Loading...</div>;
+  }
+
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      <Link className="font-bold text-xl border border-black bg-yellow-400 px-4 py-2 mb-4 inline-block rounded" to="/DataFetch">
+        Back to Users
+      </Link>
+      <h1 className="text-2xl mb-4">Edit User</h1>
+      <form onSubmit={updateUser} className="space-y-4">
+        {/* Form inputs remain the same */}
+        <input type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="border p-2 w-full rounded"/>
+        <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="border p-2 w-full rounded"/>
+        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 w-full rounded"/>
+        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded w-full">
+          Update User
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export default UserUpdate;
+</file>
+
+<file path="src/Pages/DataView/DataView.jsx">
+// src/Pages/DataView/DataView.jsx - NEW VERSION
+
+import { useEffect, useState, useMemo } from "react";
+import axios from "axios";
+import PropTypes from 'prop-types'; // Import PropTypes
+
+const CATEGORIES = ["All", "Ghee & Oil", "Rice & Pulses", "Snacks & Spices", "Cold Drinks"];
+
+function ProductCard({ product }) {
+  // The server provides a relative path like 'uploads/image.jpg'. 
+  // We construct the full URL to fetch the image.
+  const imageUrl = `http://localhost:7000/${product.imageUrl}`;
+
+  return (
+    <div className="border rounded-lg shadow-sm overflow-hidden">
+      <img src={imageUrl} alt={product.name} className="w-full h-48 object-cover" />
+      <div className="p-4">
+        <h3 className="font-bold text-lg">{product.name}</h3>
+        <p className="text-gray-600">₹{parseFloat(product.price).toFixed(2)}</p>
+      </div>
+    </div>
+  );
+}
+
+// Add prop-types validation for the ProductCard component
+ProductCard.propTypes = {
+  product: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    imageUrl: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    category: PropTypes.string.isRequired
+  }).isRequired
+};
+
+
+function DataView() {
+  const [products, setProducts] = useState([]);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  useEffect(() => {
+    // This is a public endpoint, so we use the global axios instance
+    axios.get("http://localhost:7000/api/products")
+      .then((response) => {
+        setProducts(response.data);
+      })
+      .catch((err) => {
+        console.error("Error fetching products:", err);
+        setError("Failed to load product data.");
+      });
+  }, []);
+
+  // Use useMemo to efficiently filter and group products
+  const groupedProducts = useMemo(() => {
+    // 1. Filter by search term and category
+    const filtered = products.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+    
+    // 2. Group the filtered products by category
+    return filtered.reduce((acc, product) => {
+      (acc[product.category] = acc[product.category] || []).push(product);
+      return acc;
+    }, {});
+  }, [products, searchTerm, selectedCategory]);
+
+  if (error) {
+    return <div className="p-4 text-red-500 text-center">{error}</div>;
+  }
+
+  return (
+    <div className="p-4 max-w-6xl mx-auto">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold">Our Products</h1>
+        <p className="text-lg text-gray-500 mt-2">Find everything you need for your pantry</p>
+      </div>
+
+      {/* --- Search and Filter Controls --- */}
+      <div className="flex flex-col md:flex-row gap-4 mb-8 p-4 bg-gray-50 rounded-lg">
+        <input
+          type="text"
+          placeholder="Search by product name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border p-2 rounded-md flex-grow"
+        />
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="border p-2 rounded-md"
+        >
+          {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+        </select>
+      </div>
+      
+      {/* --- Product Display --- */}
+      {Object.keys(groupedProducts).length > 0 ? (
+        Object.entries(groupedProducts).map(([category, items]) => (
+          <div key={category} className="mb-10">
+            <h2 className="text-2xl font-bold border-b-2 border-blue-500 pb-2 mb-6">{category}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {items.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        <p className="text-center text-gray-500 text-xl py-10">
+          {products.length > 0 ? "No products match your search." : "Loading products..."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default DataView;
+</file>
+
+<file path="src/Pages/Generals/Home.jsx">
+function App() {
+
+  return (
+    <>
+      <h1
+        className="text-3xl text-center text-red-700"
+      >Home </h1>
+      
+
+
+
+    </>
+  )
+}
+
+export default App
+</file>
+
+<file path="src/Pages/Generals/Putdata.jsx">
+// PutData.js - Create User Component (Updated)
+import { useState } from "react";
+import axios from "axios";
+import { Link } from "react-router-dom";
+
+function Userregistration() {
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+
+  const createUser = async () => {
+    // Basic validation
+    if (!name || !username || !email) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Using the original endpoint from your code
+      const response = await axios.post("http://localhost:7000/form1", {
+        name,
+        username,
+        email
+      }, {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        alert("New user added successfully");
+        // Clear form
+        setName('');
+        setUsername('');
+        setEmail('');
+        // Optionally navigate back to user list
+        // navigate('/getdata');
+      }
+    } catch (error) {
+      console.error("Error creating user:", error);
+      alert("Failed to add user: " + (error.response?.data?.message || error.message));
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="p-4">
+      <Link 
+        className="font-bold text-3xl border border-black bg-yellow-400 p-2 mb-4 inline-block" 
+        to="/getdata"
+      >
+        View Users
+      </Link>
+
+      <h1 className="text-2xl mb-4">Add New User</h1>
+      
+      <div className="space-y-4">
+        <input 
+          type="text" 
+          placeholder="Name" 
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="border p-2 w-full"
+        />
+        <input 
+          type="text" 
+          placeholder="Username" 
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="border p-2 w-full"
+        />
+        <input 
+          type="email" 
+          placeholder="Email" 
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="border p-2 w-full"
+        />
+        <button 
+          onClick={createUser}
+          disabled={loading}
+          className="bg-green-500 text-white px-4 py-2 rounded disabled:opacity-50"
+        >
+          {loading ? "Adding..." : "Add User"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default Userregistration;
+</file>
+
+<file path="src/Pages/Team/Main1.jsx">
+function Main1(){
+    return(
+
+        <div>
+            
+    
+                
+
+        <div className="flex items-center justify-center mt-8 pt-8">
+            <div className="text-[45px] m-4 w-[70%] h-[160px] border-4 rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            Utility Stores Corporation Leadership
+            </div></div>
+
+
+
+            <div className="flex items-center justify-center pt-8 mt-8">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm1.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Rana Tanveer Hussain </p> 
+               <p>Federal Minister for Industries & Production. </p>  </div> 
+            </div>
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm2.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Abdul Hussain Qureshi </p> 
+               <p>Federal Minister for Oil & Industries . </p>  </div> 
+            </div>
+
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm3.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl "> Alyas Abbasi </p> 
+               <p>Duputy Minister for Automobiles. </p>  </div> 
+            </div>
+
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm4.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Ch. Jamshiad Akram </p> 
+               <p>Secretary Minister for Defence. </p>  </div> 
+            </div>
+
+
+
+
+            <div className="flex items-center justify-center mt-8 pt-8">
+            <div className="font-medium text-[40px] m-4 w-[60%] h-[160px] border-4 rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            Our Strength
+            </div></div>
+        
+        
+
+
+    
+        
+        </div>
+    )
+}
+
+export default Main1
+</file>
+
+<file path="src/Pages/Team/Team.jsx">
+import Main1 from './Main1'
+import Slider from '../../Components/Common/Slider'
+
+
+function Team(){
+    return(
+        
+        <div>
+            
+       
+
+        <Slider/>
+                
+        <Main1/>
+
+
+        
+          
+        
+        </div>
+    )
+}
+
+export default Team
+</file>
+
+<file path="src/Pages/UtilityStore/History.jsx">
+function Team(){
+    return(
+        
+        <div>
+            
+               
+            <div className="flex flex-row sm:flex-col justify-center items-center">
+            <div className="  sm:w-[700px] sm:flex sm:justify-center sm:items-center">
+                <div className=" sm:w-[50%]  "><img className="sm:h-[670px]  pb-2 hover:shadow-lg hover:shadow-indigo-300" src="images/History/p4r.jpg" alt="" /> </div>
+                <div className="sm:w-[50%]">
+                <h6 className="sm:pl-8 sm:pr-8 text-3xl font-semibold">Serving The Nation Through The Years!</h6> <br/>
+                <p className="sm:pl-8 sm:pr-8">Utility Stores Corporation was established in July 1971, by taking over 20 retail outlets from the Staff Welfare Organization. Passing through various stages of expansion and reorganization, the 4000 + Stores Corporation at present is operating 4000+ stores throughout the Country. We are committed to providing clean, graded, hygienically fit, unadulterated genuine food and non-food items to the public and especially to the poorer segments of the society, at comparatively cheaper rates than the market and to offer them a pleasant environment of mutual confidence while making their purchases.</p>
+                <button className="text-white bg-teal-600 px-4 py-2 mt-2 ml-8 rounded-md hover:bg-teal-500">Discover</button>
+                </div>
+            </div></div>
+            
+
+
+
+
+
+            <div className="flex items-center justify-center container mx-auto">
+                <div className="mb-2 mt-4 w-[60%]  hover:shadow-lg hover:shadow-indigo-300">
+                    <img src="images/Package/banner_4.jpg" alt="" />
+                </div>
+            </div>
+
+        
+        </div>
+    )
+}
+
+export default Team
+</file>
+
+<file path="src/Pages/UtilityStore/Leadership.jsx">
+function Team(){
+    return(
+        
+        <div>
+            
+                  <div className="flex items-center justify-center mt-8 pt-8">
+            <div className="text-[45px] m-4 w-[70%] h-[160px] border-4 rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            Utility Stores Corporation Leadership
+            </div></div>
+
+
+
+            <div className="flex items-center justify-center pt-8 mt-8">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm1.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Rana Tanveer Hussain </p> 
+               <p>Federal Minister for Industries & Production. </p>  </div> 
+            </div>
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm2.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Abdul Hussain Qureshi </p> 
+               <p>Federal Minister for Oil & Industries . </p>  </div> 
+            </div>
+
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm3.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl "> Alyas Abbasi </p> 
+               <p>Duputy Minister for Automobiles. </p>  </div> 
+            </div>
+
+
+
+            <div className="flex items-center justify-center  ">
+                <div className=" mb-8 pb-8  "><img className="h-64 w-64 rounded-full border-8 border-cyan-200 hover:border-cyan-500" src="images/Leaders/tm4.jpg" alt="" /></div>
+              <div className="pl-2  mb-[180px]"><p className="font-semibold text-xl"> Ch. Jamshiad Akram </p> 
+               <p>Secretary Minister for Defence. </p>  </div> 
+            </div>
+
+
+
+
+            <div className="flex items-center justify-center mt-8 pt-8">
+            <div className="font-medium text-[40px] m-4 w-[60%] h-[160px] border-4 rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            Our Strength
+            </div></div>
+        
+        
+
+
+        
+        </div>
+    )
+}
+
+export default Team
+</file>
+
+<file path="src/Pages/UtilityStore/Offering.jsx">
+function Team(){
+    return(
+        
+        <div>
+            
+              
+              <div className="flex items-center justify-center text-center my-4">
+            <div className="font-medium  text-[100px]    border-4 rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            <p className="px-8 py-4 ">WE ARE <br /> OFFERING</p>
+            </div></div> 
+
+
+
+
+            <div className=" ">
+                <div className="  grid grid-cols-2 sm:grid-cols-4  ml-8 pl-8 mb-8 mt-4 ">
+                    <div className=" "> <img className="hover:animate-tilt-shaking h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Offering/snacks_&_spices.jpg" alt="" /></div>
+                    <div className=" "><img className="hover:animate-tilt-shaking h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Offering/rice_&_pulses.jpg" alt="" /></div>
+                    <div className=" "><img className="hover:animate-tilt-shaking h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Offering/home_cleaning.jpg" alt="" /></div>    
+                    <div className=" "><img className="hover:animate-tilt-shaking h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Offering/personal_hygiene.jpg" alt="" /></div>     
+                </div>
+             </div>
+
+
+          
+        
+        </div>
+    )
+}
+
+export default Team
+</file>
+
+<file path="src/Pages/UtilityStore/Products.jsx">
+function Team(){
+    return(
+        
+        <div>
+
+
+ <div className="flex items-center justify-center ">
+            <div className="font-medium  text-[40px]    rounded-xl border-amber-500  flex flex-col justify-center items-center text-shadow-blue"> 
+            <p className="px-32 py-12">Providing Clean, Graded, <br/> Hygienically Fit Product</p>
+            </div></div>
+
+
+
+
+             <div className="flex items-center justify-center">
+
+                <div className=" sm:w-[70%]  sm:flex items-center justify-center">
+                    <div className="sm:w-[33%] "> <img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p1.png" alt="" /></div>
+                    <div className="sm:w-[33%] "><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p2.png" alt="" /></div>
+                    <div className="sm:w-[33%] "><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p3.png" alt="" /></div>       
+                </div>
+             </div>
+
+
+
+             <div className="flex items-center justify-center mt-4 ">
+                <div className=" w-[70%] sm:flex items-center justify-center">
+                    <div className="w-[33%] flex items-center justify-center"> <img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p4.png" alt="" /></div>
+                    <div className="w-[33%] flex items-center justify-center"><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p5.png" alt="" /></div>
+                    <div className="w-[33%] flex items-center justify-center"><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p6.png" alt="" /></div>       
+                </div>
+             </div>
+
+
+
+             <div className="flex items-center justify-center mt-4">
+                <div className=" w-[55%] sm:flex  items-center justify-center">
+                    <div className="w-[50%] flex items-center justify-center"> <img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p7.png" alt="" /></div>
+                    <div className="w-[50%] flex items-center justify-center"><img className="h-64 hover:border-8 border-lime-50 duration-300 hover:shadow-lg hover:shadow-indigo-300" src="images/Products/p8.png" alt="" /></div>
+                          
+                </div>
+             </div>
+            
+
+
+          
+        
+        </div>
+    )
+}
+
+export default Team
+</file>
+
+<file path="src/Pages/UtilityStore/UtilityStore.jsx">
+import Slider from '../../Components/Common/Slider'
+
+
+import History from './History'
+import Leadership from './Leadership'
+import Offering from './Offering'
+import Products from './Products'
+
+function UtilityStore(){
+    return(
+        
+             <div>
+
+            
+        
+
+        <Slider/>
+
+        <Offering/>
+        <History/>
+        <Products/>
+        <Leadership/>
+        
+        
+
+
+     
+          
+        
+        </div>
+    )
+}
+
+export default UtilityStore
+</file>
+
+<file path="tailwind.config.js">
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}"
+  ],
+  theme: {
+    extend: {
+
+      textShadow: {
+        'blue': '5px 5px 10px blue',
+      },
+
+      keyframes: {
+        'tilt-shaking': {
+          '0%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(5deg)' },
+          '50%': { transform: 'rotate(0deg)' },
+          '75%': { transform: 'rotate(-5deg)' },
+          '100%': { transform: 'rotate(0deg)' },
+        },
+      
+        'colorAnimate': {
+          '0%': { borderColor: 'salmon' },
+          '25%': { borderColor: '#e18ce1' },
+          '50%': { borderColor: 'paleturquoise' },
+          '75%': { borderColor: 'green' },
+          '100%': { borderColor: 'yellow' }
+        },
+      },
+
+
+      animation: {
+        'tilt-shaking': 'tilt-shaking 0.8s ease infinite',
+        'color-animate': 'colorAnimate 5s ease-in 1s infinite',  
+      }
+
+    },
+  },
+  plugins: [],
+}
+</file>
+
+<file path="vite.config.js">
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})
+</file>
+
+</files>
