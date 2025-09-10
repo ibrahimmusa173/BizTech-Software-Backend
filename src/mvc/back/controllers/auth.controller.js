@@ -1,87 +1,168 @@
-// src/mvc/back/controllers/auth.controller.js - FINAL CORRECTED VERSION
+// src/backend/controllers/authController.js
+const User = require('../models/userModel');
+const bcrypt = require('bcryptjs');
+const jwt =require('jsonwebtoken');
+const crypto = require('crypto');
+require('dotenv').config();
 
-const User = require("../models/user.model.js");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
+// Generate JWT Token
+const generateToken = (id) => {
+    return jwt.sign({ id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRES_IN,
+    });
+};
 
-// Make sure to use an environment variable for this in production
-const JWT_SECRET = "your_super_secret_key_12345";
+// @desc    Register a new user (Client or Bidder)
+// @route   POST /api/auth/register
+exports.registerUser = async (req, res) => {
+    const { fullName, companyName, email, password, role } = req.body;
 
-// --- REGISTER A NEW USER ---
-exports.register = (req, res) => {
-    // 1. Validate the request
-    if (!req.body.email || !req.body.password || !req.body.name || !req.body.username) {
-        return res.status(400).send({ message: "Please provide all required fields." });
+    if (!fullName || !email || !password || !role) {
+        return res.status(400).json({ message: 'Please provide Full Name, Email, Password, and Role' });
     }
 
-    // 2. Create a User object with the data
-    const user = new User({
-        name: req.body.name,
-        username: req.body.username,
-        email: req.body.email,
-        password: req.body.password,
-    });
+    if (role !== 'client' && role !== 'bidder') {
+        return res.status(400).json({ message: 'Invalid role specified. Must be "client" or "bidder".' });
+    }
 
-    // 3. Call the model to save the user to the database
-    User.create(user, (err, data) => {
-        if (err) {
-            // Check for duplicate entry error from MySQL
-            if (err.code === 'ER_DUP_ENTRY') {
-                return res.status(409).send({ message: "Email or username already exists." });
-            }
-            // For any other error
-            console.error("DATABASE ERROR on register:", err);
-            return res.status(500).send({ message: "Error registering user." });
+    try {
+        const existingUsers = await User.findByEmail(email);
+        if (existingUsers.length > 0) {
+            return res.status(400).json({ message: 'User with this email already exists' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newUser = {
+            fullName,
+            companyName: companyName || null,
+            email,
+            password: hashedPassword,
+            role
+        };
+
+        const result = await User.create(newUser);
+        
+        const token = generateToken(result.insertId);
+        
+        res.status(201).json({
+            token,
+            message: 'User registered successfully'
+        });
+
+    } catch (error) {
+        console.error("Registration error:", error);
+        res.status(500).json({ message: 'Server error during registration' });
+    }
+};
+
+// @desc    Authenticate user & get token
+// @route   POST /api/auth/login
+exports.loginUser = async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    try {
+        const users = await User.findByEmail(email);
+        if (users.length === 0) {
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
         
-        // 4. Send a success response
-        res.status(201).send({ message: "User registered successfully!", user: data });
-    });
+        const user = users[0];
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (isMatch) {
+            const token = generateToken(user.id);
+            res.json({
+                token,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    role: user.role,
+                    fullName: user.full_name,
+                    companyName: user.company_name
+                }
+            });
+        } else {
+            res.status(401).json({ message: 'Invalid credentials' });
+        }
+    } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).json({ message: 'Server error during login' });
+    }
 };
 
 
-// --- LOGIN AN EXISTING USER ---
-exports.login = (req, res) => {
-    // 1. Validate the request
-    if (!req.body.email || !req.body.password) {
-        return res.status(400).send({ message: "Email and password are required." });
+// @desc    Request password reset
+// @route   POST /api/auth/forgot-password
+// This function can remain largely the same, but adapted for async/await and new model
+exports.forgotPassword = async (req, res) => {
+    const { email } = req.body;
+    try {
+        const users = await User.findByEmail(email);
+        if (!users || users.length === 0) {
+            return res.status(200).json({ message: 'If an account with that email exists, a password reset link has been processed.' });
+        }
+        const user = users[0];
+
+        const resetToken = crypto.randomBytes(20).toString('hex');
+        const hashedPasswordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+        await User.savePasswordResetToken(user.id, hashedPasswordResetToken, expires);
+        
+        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+
+        console.log('============================================');
+        console.log('PASSWORD RESET LINK (for development):');
+        console.log(resetUrl);
+        console.log('============================================');
+
+        // Here you would integrate your sendEmail utility
+        // await sendEmail({ email: user.email, subject: 'Password Reset', message: `Reset URL: ${resetUrl}` });
+
+        res.status(200).json({ message: 'Password reset link has been processed.' });
+
+    } catch (err) {
+        console.error("Error in forgotPassword:", err);
+        return res.status(500).json({ message: 'Error on the server.' });
+    }
+};
+
+
+// @desc    Reset password using token
+// @route   POST /api/auth/reset-password/:token
+// This function can also remain similar, adapted for async/await
+exports.resetPassword = async (req, res) => {
+    const unhashedToken = req.params.token;
+    const { password } = req.body;
+
+    if (!password) {
+        return res.status(400).json({ message: 'Please provide a new password.' });
     }
 
-    // 2. Find the user by email in the database
-    User.findByEmail(req.body.email, (err, user) => {
-        if (err) {
-            if (err.kind === "not_found") {
-                return res.status(401).send({ message: "Invalid email or password." });
-            }
-            return res.status(500).send({ message: "Error retrieving user." });
+    try {
+        const hashedPasswordResetToken = crypto.createHash('sha256').update(unhashedToken).digest('hex');
+        const users = await User.findByHashedPasswordResetToken(hashedPasswordResetToken);
+
+        if (!users || users.length === 0) {
+            return res.status(400).json({ message: 'Invalid or expired token.' });
         }
+        const user = users[0];
+        
+        const salt = await bcrypt.genSalt(10);
+        const newHashedPassword = await bcrypt.hash(password, salt);
 
-        // 3. Compare the provided password with the stored hashed password
-        const passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
-        if (!passwordIsValid) {
-            return res.status(401).send({ message: "Invalid email or password." });
-        }
+        await User.resetPassword(user.id, newHashedPassword);
+        
+        res.status(200).json({ message: 'Password has been reset successfully. You can now log in.' });
 
-        // 4. If password is valid, create a JWT token
-        const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-            expiresIn: 86400 // 24 hours
-        });
-
-        // 5. Send the successful response with the token
-        res.status(200).send({
-            message: "Login successful!",
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                username: user.username,
-            }
-        });
-    });
+    } catch(err) {
+        console.error("Error resetting password:", err);
+        return res.status(500).json({ message: 'Error resetting password.' });
+    }
 };
-
-
-// --- You can add your forgotPassword and resetPassword functions here later ---
-// exports.forgotPassword = (req, res) => { ... };
-// exports.resetPassword = (req, res) => { ... };

@@ -1,26 +1,38 @@
-const jwt = require("jsonwebtoken");
-const JWT_SECRET = "your_super_secret_key_12345"; // IMPORTANT: Use an environment variable for this
+// src/backend/middleware/authMiddleware.js
+const jwt = require('jsonwebtoken');
+const User = require('../models/userModel'); // <-- IMPORT USER MODEL
+require('dotenv').config();
 
-const verifyToken = (req, res, next) => {
-  let token = req.headers["authorization"];
+const protect = async (req, res, next) => { // <-- MAKE ASYNC
+    let token;
 
-  if (!token) {
-    return res.status(403).send({ message: "No token provided!" });
-  }
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            // Get token from header
+            token = req.headers.authorization.split(' ')[1];
 
-  if (token.startsWith('Bearer ')) {
-    // Remove "Bearer " from string
-    token = token.slice(7, token.length);
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: "Unauthorized! Token is not valid." });
+            // Verify token
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            
+            // Get user from the token AND attach to request <-- THIS IS THE CHANGE
+            const users = await User.findById(decoded.id);
+            if (users && users.length > 0) {
+                // Attach the user object without the password
+                const { password, ...userWithoutPassword } = users[0];
+                req.user = userWithoutPassword; 
+                next();
+            } else {
+                 return res.status(401).json({ message: 'Not authorized, user not found' });
+            }
+        } catch (error) {
+            console.error(error);
+            return res.status(401).json({ message: 'Not authorized, token failed' });
+        }
     }
-    // Add user ID from token payload to the request object
-    req.userId = decoded.id; 
-    next();
-  });
+
+    if (!token) {
+        return res.status(401).json({ message: 'Not authorized, no token' });
+    }
 };
 
-module.exports = verifyToken;
+module.exports = { protect };

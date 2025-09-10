@@ -1,135 +1,90 @@
-const sql = require("./db.js");
-const bcrypt = require("bcryptjs");
+// src/backend/models/userModel.js
+const db = require('../config/db');
 
-// Constructor
-const User = function(user) {
-  this.name = user.name;
-  this.username = user.username;
-  this.email = user.email;
-  if (user.password) {
-    this.password = user.password;
-  }
-};
+const User = {
+    // Creates a new user with a specific role and profile
+    create: async (userData) => {
+        const { email, password, role, fullName, companyName } = userData;
+        const connection = await db.getConnection();
 
-// --- AUTHENTICATION METHOD (Replaces old create) ---
-User.create = (newUser, result) => {
-  if (!newUser.password) {
-    result({ message: "Password is required for registration." }, null);
-    return;
-  }
-  // Hash the password before saving
-  newUser.password = bcrypt.hashSync(newUser.password, 8);
+        try {
+            await connection.beginTransaction();
 
-  sql.query("INSERT INTO users SET ?", newUser, (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(err, null);
-      return;
-    }
-    // IMPORTANT: Do not return the password hash in the response
-    const userWithoutPassword = { ...newUser };
-    delete userWithoutPassword.password;
+            // 1. Insert into the main users table
+            const userQuery = "INSERT INTO users (email, password, role) VALUES (?, ?, ?)";
+            const [userResult] = await connection.query(userQuery, [email, password, role]);
+            const userId = userResult.insertId;
+
+            // 2. Insert into the role-specific profile table
+            let profileQuery;
+            if (role === 'client') {
+                profileQuery = "INSERT INTO clients (user_id, full_name, company_name) VALUES (?, ?, ?)";
+            } else if (role === 'bidder') {
+                profileQuery = "INSERT INTO bidders (user_id, full_name, company_name) VALUES (?, ?, ?)";
+            } else {
+                throw new Error("Invalid user role specified");
+            }
+
+            await connection.query(profileQuery, [userId, fullName, companyName]);
+
+            await connection.commit();
+            return { insertId: userId };
+        } catch (error) {
+            await connection.rollback();
+            throw error; // Propagate the error to be caught by the controller
+        } finally {
+            connection.release();
+        }
+    },
+
+    // Finds a user by email and joins with their profile table
+    findByEmail: async (email) => {
+        const query = `
+            SELECT 
+                u.id, u.email, u.password, u.role,
+                COALESCE(c.full_name, b.full_name) AS full_name,
+                COALESCE(c.company_name, b.company_name) AS company_name
+            FROM users u
+            LEFT JOIN clients c ON u.id = c.user_id AND u.role = 'client'
+            LEFT JOIN bidders b ON u.id = b.user_id AND u.role = 'bidder'
+            WHERE u.email = ?
+        `;
+        const [rows] = await db.query(query, [email]);
+        return rows;
+    },
+
+    // Finds a user by ID and joins with their profile table (for fetching profile)
+    findById: async (userId) => {
+         const query = `
+            SELECT 
+                u.id, u.email, u.role,
+                COALESCE(c.full_name, b.full_name) AS full_name,
+                COALESCE(c.company_name, b.company_name) AS company_name
+            FROM users u
+            LEFT JOIN clients c ON u.id = c.user_id AND u.role = 'client'
+            LEFT JOIN bidders b ON u.id = b.user_id AND u.role = 'bidder'
+            WHERE u.id = ?
+        `;
+        const [rows] = await db.query(query, [userId]);
+        return rows;
+    },
+
+    // --- Password Reset Methods (Updated for async/await) ---
+    savePasswordResetToken: (userId, token, expires) => {
+        const query = "UPDATE users SET resetPasswordToken = ?, resetPasswordExpires = ? WHERE id = ?";
+        return db.query(query, [token, expires, userId]);
+    },
+
+    findByHashedPasswordResetToken: async (hashedToken) => {
+        const query = "SELECT * FROM users WHERE resetPasswordToken = ? AND resetPasswordExpires > NOW()";
+        const [rows] = await db.query(query, [hashedToken]);
+        return rows;
+    },
     
-    result(null, { id: res.insertId, ...userWithoutPassword });
-  });
-};
-
-// Find a user by email (needed for login)
-User.findByEmail = (email, result) => {
-  sql.query(`SELECT * FROM users WHERE email = ?`, [email], (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
+    resetPassword: (userId, newHashedPassword) => {
+        const query = "UPDATE users SET password = ?, resetPasswordToken = NULL, resetPasswordExpires = NULL WHERE id = ?";
+        return db.query(query, [newHashedPassword, userId]);
     }
-    if (res.length) {
-      result(null, res[0]);
-      return;
-    }
-    result({ kind: "not_found" }, null);
-  });
-};
-
-// --- PASSWORD RESET METHODS ---
-
-// Save reset token and expiry to the database for a user
-User.saveResetToken = (email, token, expire, result) => {
-    sql.query(
-        "UPDATE users SET resetPasswordToken = ?, resetPasswordExpire = ? WHERE email = ?",
-        [token, expire, email],
-        (err, res) => {
-            if (err) { result(err, null); return; }
-            if (res.affectedRows === 0) { result({ kind: "not_found" }, null); return; }
-            result(null, res);
-        }
-    );
-};
-
-// Find a user by a valid (non-expired) reset token
-User.findByResetToken = (token, result) => {
-    sql.query(
-        "SELECT * FROM users WHERE resetPasswordToken = ? AND resetPasswordExpire > NOW()",
-        [token],
-        (err, res) => {
-            if (err) { result(err, null); return; }
-            if (res.length) { result(null, res[0]); return; }
-            // If no user is found, or the token is expired, return "not_found"
-            result({ kind: "not_found" }, null);
-        }
-    );
-};
-
-// Update a user's password and clear the reset token
-User.updatePassword = (id, password, result) => {
-    const newHashedPassword = bcrypt.hashSync(password, 8);
-    sql.query(
-        "UPDATE users SET password = ?, resetPasswordToken = NULL, resetPasswordExpire = NULL WHERE id = ?",
-        [newHashedPassword, id],
-        (err, res) => {
-            if (err) { result(err, null); return; }
-            if (res.affectedRows === 0) { result({ kind: "not_found" }, null); return; }
-            result(null, res);
-        }
-    );
-};
-
-
-// --- CRUD METHODS (Remain the same but now only for authenticated users) ---
-
-User.findById = (id, result) => {
-  // Select only non-sensitive fields
-  sql.query(`SELECT id, name, username, email FROM users WHERE id = ${id}`, (err, res) => {
-    if (err) { result(err, null); return; }
-    if (res.length) { result(null, res[0]); return; }
-    result({ kind: "not_found" }, null);
-  });
-};
-
-User.getAll = (result) => {
-  // Select only non-sensitive fields
-  sql.query("SELECT id, name, username, email FROM users ORDER BY id DESC", (err, res) => {
-    if (err) { result(err, null); return; }
-    result(null, res);
-  });
-};
-
-User.updateById = (id, user, result) => {
-  sql.query(
-    "UPDATE users SET name = ?, username = ?, email = ? WHERE id = ?",
-    [user.name, user.username, user.email, id],
-    (err, res) => {
-      if (err) { result(err, null); return; }
-      if (res.affectedRows === 0) { result({ kind: "not_found" }, null); return; }
-      result(null, { id: id, ...user });
-    }
-  );
-};
-
-User.remove = (id, result) => {
-  sql.query("DELETE FROM users WHERE id = ?", id, (err, res) => {
-    if (err) { result(err, null); return; }
-    if (res.affectedRows === 0) { result({ kind: "not_found" }, null); return; }
-    result(null, res);
-  });
 };
 
 module.exports = User;

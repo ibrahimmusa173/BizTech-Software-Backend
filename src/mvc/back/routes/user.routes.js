@@ -1,11 +1,10 @@
+// src/backend/routes/userRoutes.js
 const express = require("express");
 const router = express.Router();
-const users = require("../controllers/user.controller.js");
-const verifyToken = require("../middleware/auth.middleware.js");
+const { getUserProfile } = require("../controllers/userController");
+const { protect } = require('../middleware/authMiddleware');
 
-router.get("/", [verifyToken], users.findAll);
-router.get("/:id", [verifyToken], users.findOne);
-router.put("/:id", [verifyToken], users.update);
-router.delete("/:id", [verifyToken], users.delete);
+// PROTECTED ROUTE to get the logged-in user's profile
+router.get("/users/me", protect, getUserProfile);
 
 module.exports = router;
