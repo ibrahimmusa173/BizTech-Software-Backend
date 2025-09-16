@@ -51,14 +51,14 @@ public/vite.svg
 README.md
 src/App.jsx
 src/assets/react.svg
-src/backend/.env
-src/backend/confiq/db.js
-src/backend/controllers/taskController.js
-src/backend/models/taskModel.js
-src/backend/routes/taskRoutes.js
-src/backend/server.js
 src/index.css
 src/index.js
+src/mvc/back/confiq/db.js
+src/mvc/back/controllers/itemController.js
+src/mvc/back/models/itemModel.js
+src/mvc/back/routes/itemRoutes.js
+src/mvc/back/server.js
+src/mvc/front/api.js
 src/Pages/Local.jsx
 tailwind.config.js
 vite.config.js
@@ -66,6 +66,234 @@ vite.config.js
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="src/mvc/back/confiq/db.js">
+// src/mvc/back/config/db.js
+const mysql = require('mysql2/promise');
+require('dotenv').config(); // Load environment variables
+
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'your_password', // !!! IMPORTANT: Change this to your MySQL root password or a dedicated user's password
+  database: process.env.DB_NAME || 'practice_db',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
+
+async function testDbConnection() {
+  try {
+    const connection = await pool.getConnection();
+    console.log('Successfully connected to the database.');
+    connection.release();
+  } catch (error) {
+    console.error('Failed to connect to the database:', error.message);
+    process.exit(1); // Exit process if cannot connect to DB
+  }
+}
+
+testDbConnection();
+
+module.exports = pool;
+</file>
+
+<file path="src/mvc/back/controllers/itemController.js">
+// src/mvc/back/controllers/itemController.js
+const itemModel = require('../models/itemModel');
+
+const itemController = {
+  getAllItems: async (req, res) => {
+    try {
+      const items = await itemModel.findAll();
+      res.json(items);
+    } catch (error) {
+      console.error('Error fetching items:', error);
+      res.status(500).json({ message: 'Error fetching items', error: error.message });
+    }
+  },
+
+  getItemById: async (req, res) => {
+    try {
+      const item = await itemModel.findById(req.params.id);
+      if (item) {
+        res.json(item);
+      } else {
+        res.status(404).json({ message: 'Item not found' });
+      }
+    } catch (error) {
+      console.error('Error fetching item by ID:', error);
+      res.status(500).json({ message: 'Error fetching item', error: error.message });
+    }
+  },
+
+  createItem: async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: 'Item name is required' });
+      }
+      const newItem = await itemModel.create(name);
+      res.status(201).json(newItem);
+    } catch (error) {
+      console.error('Error creating item:', error);
+      res.status(500).json({ message: 'Error creating item', error: error.message });
+    }
+  },
+
+  updateItem: async (req, res) => {
+    try {
+      const { name } = req.body;
+      const { id } = req.params;
+      if (!name) {
+        return res.status(400).json({ message: 'Item name is required' });
+      }
+      const success = await itemModel.update(id, name);
+      if (success) {
+        res.json({ message: 'Item updated successfully' });
+      } else {
+        res.status(404).json({ message: 'Item not found or no changes made' });
+      }
+    } catch (error) {
+      console.error('Error updating item:', error);
+      res.status(500).json({ message: 'Error updating item', error: error.message });
+    }
+  },
+
+  deleteItem: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await itemModel.delete(id);
+      if (success) {
+        res.status(204).send(); // No content for successful deletion
+      } else {
+        res.status(404).json({ message: 'Item not found' });
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      res.status(500).json({ message: 'Error deleting item', error: error.message });
+    }
+  },
+};
+
+module.exports = itemController;
+</file>
+
+<file path="src/mvc/back/models/itemModel.js">
+// src/mvc/back/models/itemModel.js
+const pool = require('../config/db');
+
+const itemModel = {
+  findAll: async () => {
+    const [rows] = await pool.execute('SELECT * FROM items ORDER BY id DESC');
+    return rows;
+  },
+
+  findById: async (id) => {
+    const [rows] = await pool.execute('SELECT * FROM items WHERE id = ?', [id]);
+    return rows[0]; // Return the first matching item
+  },
+
+  create: async (name) => {
+    const [result] = await pool.execute('INSERT INTO items (name) VALUES (?)', [name]);
+    return { id: result.insertId, name }; // Return the newly created item's ID and name
+  },
+
+  update: async (id, name) => {
+    const [result] = await pool.execute('UPDATE items SET name = ? WHERE id = ?', [name, id]);
+    return result.affectedRows > 0; // Return true if an item was updated
+  },
+
+  delete: async (id) => {
+    const [result] = await pool.execute('DELETE FROM items WHERE id = ?', [id]);
+    return result.affectedRows > 0; // Return true if an item was deleted
+  },
+};
+
+module.exports = itemModel;
+</file>
+
+<file path="src/mvc/back/routes/itemRoutes.js">
+// src/mvc/back/routes/itemRoutes.js
+const express = require('express');
+const itemController = require('../controllers/itemController');
+const router = express.Router();
+
+// GET all items
+router.get('/', itemController.getAllItems);
+
+// GET a single item by ID
+router.get('/:id', itemController.getItemById);
+
+// POST a new item
+router.post('/', itemController.createItem);
+
+// PUT (update) an item by ID
+router.put('/:id', itemController.updateItem);
+
+// DELETE an item by ID
+router.delete('/:id', itemController.deleteItem);
+
+module.exports = router;
+</file>
+
+<file path="src/mvc/front/api.js">
+// src/api.js
+import axios from 'axios';
+
+// The base URL for your backend API
+// This should match the port your server.js is running on (e.g., 5000)
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const fetchData = async () => {
+  try {
+    const response = await api.get('/items'); // Adjusted to /api/items route
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw error;
+  }
+};
+
+export const postData = async (newItem) => {
+  try {
+    const response = await api.post('/items', newItem); // Adjusted to /api/items route
+    return response.data;
+  } catch (error) {
+    console.error('Error posting data:', error);
+    throw error;
+  }
+};
+
+export const updateData = async (id, updatedItem) => {
+  try {
+    const response = await api.put(`/items/${id}`, updatedItem); // Adjusted to /api/items/:id route
+    return response.data;
+  } catch (error) {
+    console.error('Error updating data:', error);
+    throw error;
+  }
+};
+
+export const deleteData = async (id) => {
+  try {
+    const response = await api.delete(`/items/${id}`); // Adjusted to /api/items/:id route
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting data:', error);
+    throw error;
+  }
+};
+
+export default api;
+</file>
 
 <file path=".eslintrc.cjs">
 module.exports = {
@@ -229,202 +457,6 @@ https://www.youtube.com/watch?v=Zk2YJUvfsOA
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
 </file>
 
-<file path="src/backend/.env">
-PORT=5000
-
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=task_manager_db
-</file>
-
-<file path="src/backend/confiq/db.js">
-require('dotenv').config();
-
-const mysql = require('mysql2/promise');
-
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-// Test the connection
-pool.getConnection()
-  .then(connection => {
-    console.log('MySQL Connected...');
-    connection.release(); // release the connection back to the pool
-  })
-  .catch(err => {
-    console.error('Error connecting to MySQL:', err.stack);
-  });
-
-module.exports = pool;
-</file>
-
-<file path="src/backend/controllers/taskController.js">
-const Task = require('../models/taskModel');
-
-// @desc    Get all tasks
-const getTasks = async (req, res) => {
-  try {
-    const tasks = await Task.findAll();
-    res.status(200).json(tasks);
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error });
-  }
-};
-
-// @desc    Create a task
-const createTask = async (req, res) => {
-  if (!req.body.title) {
-    return res.status(400).json({ message: 'Please provide a title' });
-  }
-  try {
-    const task = await Task.create({ title: req.body.title });
-    res.status(201).json(task);
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error });
-  }
-};
-
-// @desc    Update a task
-const updateTask = async (req, res) => {
-  try {
-    const taskExists = await Task.findById(req.params.id);
-    if (!taskExists) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-    const updatedTask = await Task.update(req.params.id, req.body);
-    res.status(200).json(updatedTask);
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error });
-  }
-};
-
-// @desc    Delete a task
-const deleteTask = async (req, res) => {
-  try {
-    const affectedRows = await Task.remove(req.params.id);
-    if (affectedRows === 0) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-    res.status(200).json({ id: parseInt(req.params.id) }); // Send back the id for frontend state update
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error });
-  }
-};
-
-module.exports = { getTasks, createTask, updateTask, deleteTask };
-</file>
-
-<file path="src/backend/models/taskModel.js">
-const pool = require('../config/db');
-
-// In MySQL, boolean is stored as 0 or 1.
-const formatTask = (task) => ({
-    ...task,
-    completed: !!task.completed,
-});
-
-const Task = {
-  // GET all tasks
-  findAll: async () => {
-    const [rows] = await pool.query('SELECT * FROM tasks ORDER BY created_at DESC');
-    return rows.map(formatTask);
-  },
-
-  // GET a single task by ID
-  findById: async (id) => {
-    const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [id]);
-    return rows.length ? formatTask(rows[0]) : null;
-  },
-
-  // POST a new task
-  create: async (taskData) => {
-    const { title } = taskData;
-    const [result] = await pool.query('INSERT INTO tasks (title) VALUES (?)', [title]);
-    const id = result.insertId;
-    return { id, title, completed: false };
-  },
-
-  // PUT (update) a task
-  update: async (id, taskData) => {
-    const { title, completed } = taskData;
-
-    // Build the query dynamically based on what's provided
-    let query = 'UPDATE tasks SET ';
-    const params = [];
-
-    if (title !== undefined) {
-      query += 'title = ?';
-      params.push(title);
-    }
-
-    if (completed !== undefined) {
-      if (params.length > 0) query += ', ';
-      query += 'completed = ?';
-      params.push(completed);
-    }
-    
-    query += ' WHERE id = ?';
-    params.push(id);
-
-    await pool.query(query, params);
-    return Task.findById(id); // Return the updated task
-  },
-
-  // DELETE a task
-  remove: async (id) => {
-    const [result] = await pool.query('DELETE FROM tasks WHERE id = ?', [id]);
-    return result.affectedRows; // Returns 1 if successful, 0 if not found
-  },
-};
-
-module.exports = Task;
-</file>
-
-<file path="src/backend/routes/taskRoutes.js">
-const express = require('express');
-const router = express.Router();
-const {
-  getTasks,
-  createTask,
-  updateTask,
-  deleteTask,
-} = require('../controllers/taskController');
-
-router.route('/').get(getTasks).post(createTask);
-router.route('/:id').put(updateTask).delete(deleteTask);
-
-module.exports = router;
-</file>
-
-<file path="src/backend/server.js">
-const express = require('express');
-require('dotenv').config();
-const cors = require('cors');
-require('./config/db'); // This will run the connection logic
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-// Routes
-app.use('/api/tasks', require('./routes/taskRoutes'));
-
-// Start Server
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
-</file>
-
 <file path="src/index.css">
 @tailwind base;
 @tailwind components;
@@ -530,79 +562,6 @@ export default defineConfig({
 })
 </file>
 
-<file path="package.json">
-{
-  "name": "practice",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "@reduxjs/toolkit": "^2.8.2",
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.10.0",
-    "bcrypt": "^6.0.0",
-    "bcryptjs": "^3.0.2",
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
-    "express": "^5.1.0",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "multer": "^2.0.2",
-    "mysql": "^2.18.1",
-    "mysql2": "^3.14.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-hook-form": "^7.56.4",
-    "react-redux": "^9.2.0",
-    "react-router-dom": "^7.6.1",
-    "react-scripts": "5.0.1",
-    "redux": "^5.0.1",
-    "sql": "^0.78.0",
-    "web-vitals": "^2.1.4"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "server": "nodemon src/mvc/back/server.js",
-    "server:prod": "node src/mvc/back/server.js",
-    "dev": "concurrently \"npm run server\" \"npm run start\"",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.8",
-    "autoprefixer": "^10.4.21",
-    "concurrently": "^9.1.2",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "nodemon": "^3.1.10",
-    "postcss": "^8.5.4",
-    "tailwindcss": "^3.4.1"
-  }
-}
-</file>
-
 <file path="src/App.jsx">
 // // src/App.jsx
 
@@ -670,119 +629,158 @@ export default defineConfig({
 
 // src/App.jsx
 
-import  { useState, useEffect } from 'react';
-import axios from 'axios';
 
-// The base URL for our backend API
-const API_URL = 'http://localhost:5000/api/tasks/';
+
+
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+ import Local from './Pages/Local';
+
 
 function App() {
-  const [tasks, setTasks] = useState([]);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
+   return (
+            <Router>
+              <div>
 
-  // 1. GET: Fetch tasks on component mount
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const response = await axios.get(API_URL);
-        setTasks(response.data);
-      } catch (error) {
-        console.error('Error fetching tasks:', error);
-      }
-    };
-    fetchTasks();
-  }, []);
+           <Routes>
 
-  // 2. POST: Add a new task
-  const handleAddTask = async (e) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-    try {
-      const response = await axios.post(API_URL, { title: newTaskTitle });
-      setTasks([...tasks, response.data]);
-      setNewTaskTitle('');
-    } catch (error) {
-      console.error('Error adding task:', error);
-    }
-  };
+            <Route path="/" element={<Local />} />
 
-  // 3. DELETE: Delete a task
-  const handleDeleteTask = async (id) => {
-    try {
-      await axios.delete(`${API_URL}${id}`);
-      setTasks(tasks.filter((task) => task.id !== id)); // Use task.id
-    } catch (error) {
-      console.error('Error deleting task:', error);
-    }
-  };
+          </Routes>
+         </div>
 
-  // 4. PUT: Toggle the completed status
-  const handleToggleComplete = async (id) => {
-    const taskToUpdate = tasks.find((task) => task.id === id);
-    try {
-      const response = await axios.put(`${API_URL}${id}`, {
-        completed: !taskToUpdate.completed,
-      });
-      setTasks(
-        tasks.map((task) => (task.id === id ? response.data : task))
-      );
-    } catch (error) {
-      console.error('Error updating task:', error);
-    }
-  };
+    </Router>
+   );
+ }
 
-  return (
-    <div className="bg-gray-900 min-h-screen flex items-center justify-center font-sans">
-      <div className="w-full max-w-lg bg-gray-800 shadow-lg rounded-lg p-6">
-        <h1 className="text-3xl font-bold text-center text-white mb-6">Task Manager</h1>
+ export default App;
+</file>
 
-        {/* Form to add new task */}
-        <form onSubmit={handleAddTask} className="flex gap-2 mb-6">
-          <input
-            type="text"
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="Add a new task..."
-            className="flex-grow bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200"
-          >
-            Add
-          </button>
-        </form>
-
-        {/* Task List */}
-        <div className="space-y-3">
-          {tasks.map((task) => (
-            <div
-              key={task.id} // Use task.id as the key
-              className="flex items-center justify-between bg-gray-700 p-3 rounded-md"
-            >
-              <div
-                onClick={() => handleToggleComplete(task.id)}
-                className={`cursor-pointer ${
-                  task.completed ? 'line-through text-gray-400' : 'text-white'
-                }`}
-              >
-                {task.title}
-              </div>
-              <button
-                onClick={() => handleDeleteTask(task.id)}
-                className="text-red-400 hover:text-red-600 font-bold transition duration-200"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+<file path="package.json">
+{
+  "name": "practice",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.12.2",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.14.5",
+    "path": "^0.12.7",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.56.4",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.6.1",
+    "react-scripts": "5.0.1",
+    "redux": "^5.0.1",
+    "sql": "^0.78.0",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "server": "nodemon src/mvc/back/server.js",
+    "server:prod": "node src/mvc/back/server.js",
+    "dev": "concurrently \"npm run server\" \"npm run start\"",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.8",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "nodemon": "^3.1.10",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^3.4.1"
+  }
 }
+</file>
 
-export default App;
+<file path="src/mvc/back/server.js">
+// src/mvc/back/server.js
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const morgan = require('morgan'); // For request logging
+const helmet = require('helmet'); // For security
+require('dotenv').config(); // Load environment variables from .env
+
+const itemRoutes = require('./routes/itemRoutes'); // Import item routes
+
+const app = express();
+const PORT = process.env.PORT || 5000; // Use port from .env or default to 5000
+
+// --- Middleware ---
+// Helmet helps secure Express apps by setting various HTTP headers
+app.use(helmet());
+// CORS for cross-origin requests (allow frontend to connect)
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Adjust this to your frontend's actual URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));
+// Morgan for logging HTTP requests
+app.use(morgan('dev')); // 'dev' format is concise, color-coded for development
+// Body-parser to parse JSON request bodies
+app.use(bodyParser.json());
+// Body-parser to parse URL-encoded request bodies (optional, good practice)
+app.use(bodyParser.urlencoded({ extended: true }));
+
+
+// --- Routes ---
+app.get('/', (req, res) => {
+  res.send('Welcome to the MVC Backend API!');
+});
+
+// Item API routes
+app.use('/api/items', itemRoutes);
+
+
+// --- Error Handling Middleware (Optional but recommended) ---
+app.use((err, req, res) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
+
+// --- Start Server ---
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
 </file>
 
 </files>
