@@ -44,21 +44,18 @@ The content is organized as follows:
 .gitattributes
 .gitignore
 App.css
+dbconnect.js
+index.js
 package.json
 postcss.config.js
 public/index.html
 public/vite.svg
 README.md
+router.js
 src/App.jsx
 src/assets/react.svg
 src/index.css
 src/index.js
-src/mvc/back/confiq/db.js
-src/mvc/back/controllers/itemController.js
-src/mvc/back/models/itemModel.js
-src/mvc/back/routes/itemRoutes.js
-src/mvc/back/server.js
-src/mvc/front/api.js
 src/Pages/Local.jsx
 tailwind.config.js
 vite.config.js
@@ -67,232 +64,79 @@ vite.config.js
 <files>
 This section contains the contents of the repository's files.
 
-<file path="src/mvc/back/confiq/db.js">
-// src/mvc/back/config/db.js
-const mysql = require('mysql2/promise');
-require('dotenv').config(); // Load environment variables
+<file path="dbconnect.js">
+const sql= require('mysql');
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'your_password', // !!! IMPORTANT: Change this to your MySQL root password or a dedicated user's password
-  database: process.env.DB_NAME || 'practice_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+const sqlconnect= sql.createConnection({
+    host:'localhost',
+    user:'root',
+    password:'',
+    database:'practice_db',
+    multipleStatements:true
 });
 
-async function testDbConnection() {
-  try {
-    const connection = await pool.getConnection();
-    console.log('Successfully connected to the database.');
-    connection.release();
-  } catch (error) {
-    console.error('Failed to connect to the database:', error.message);
-    process.exit(1); // Exit process if cannot connect to DB
-  }
-}
+sqlconnect.connect((err)=>{
+    if(!err){
+        console.log('DB connection succeeded');
+    } else{
+        console.log('DB connection failed');
+    }
+});
 
-testDbConnection();
-
-module.exports = pool;
+module.exports= sqlconnect;
 </file>
 
-<file path="src/mvc/back/controllers/itemController.js">
-// src/mvc/back/controllers/itemController.js
-const itemModel = require('../models/itemModel');
-
-const itemController = {
-  getAllItems: async (req, res) => {
-    try {
-      const items = await itemModel.findAll();
-      res.json(items);
-    } catch (error) {
-      console.error('Error fetching items:', error);
-      res.status(500).json({ message: 'Error fetching items', error: error.message });
-    }
-  },
-
-  getItemById: async (req, res) => {
-    try {
-      const item = await itemModel.findById(req.params.id);
-      if (item) {
-        res.json(item);
-      } else {
-        res.status(404).json({ message: 'Item not found' });
-      }
-    } catch (error) {
-      console.error('Error fetching item by ID:', error);
-      res.status(500).json({ message: 'Error fetching item', error: error.message });
-    }
-  },
-
-  createItem: async (req, res) => {
-    try {
-      const { name } = req.body;
-      if (!name) {
-        return res.status(400).json({ message: 'Item name is required' });
-      }
-      const newItem = await itemModel.create(name);
-      res.status(201).json(newItem);
-    } catch (error) {
-      console.error('Error creating item:', error);
-      res.status(500).json({ message: 'Error creating item', error: error.message });
-    }
-  },
-
-  updateItem: async (req, res) => {
-    try {
-      const { name } = req.body;
-      const { id } = req.params;
-      if (!name) {
-        return res.status(400).json({ message: 'Item name is required' });
-      }
-      const success = await itemModel.update(id, name);
-      if (success) {
-        res.json({ message: 'Item updated successfully' });
-      } else {
-        res.status(404).json({ message: 'Item not found or no changes made' });
-      }
-    } catch (error) {
-      console.error('Error updating item:', error);
-      res.status(500).json({ message: 'Error updating item', error: error.message });
-    }
-  },
-
-  deleteItem: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const success = await itemModel.delete(id);
-      if (success) {
-        res.status(204).send(); // No content for successful deletion
-      } else {
-        res.status(404).json({ message: 'Item not found' });
-      }
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      res.status(500).json({ message: 'Error deleting item', error: error.message });
-    }
-  },
-};
-
-module.exports = itemController;
-</file>
-
-<file path="src/mvc/back/models/itemModel.js">
-// src/mvc/back/models/itemModel.js
-const pool = require('../config/db');
-
-const itemModel = {
-  findAll: async () => {
-    const [rows] = await pool.execute('SELECT * FROM items ORDER BY id DESC');
-    return rows;
-  },
-
-  findById: async (id) => {
-    const [rows] = await pool.execute('SELECT * FROM items WHERE id = ?', [id]);
-    return rows[0]; // Return the first matching item
-  },
-
-  create: async (name) => {
-    const [result] = await pool.execute('INSERT INTO items (name) VALUES (?)', [name]);
-    return { id: result.insertId, name }; // Return the newly created item's ID and name
-  },
-
-  update: async (id, name) => {
-    const [result] = await pool.execute('UPDATE items SET name = ? WHERE id = ?', [name, id]);
-    return result.affectedRows > 0; // Return true if an item was updated
-  },
-
-  delete: async (id) => {
-    const [result] = await pool.execute('DELETE FROM items WHERE id = ?', [id]);
-    return result.affectedRows > 0; // Return true if an item was deleted
-  },
-};
-
-module.exports = itemModel;
-</file>
-
-<file path="src/mvc/back/routes/itemRoutes.js">
-// src/mvc/back/routes/itemRoutes.js
+<file path="index.js">
 const express = require('express');
-const itemController = require('../controllers/itemController');
-const router = express.Router();
+const bodyParser= require('body-parser');
+const cors = require('cors');
+const RouterPath = require('./router');
 
-// GET all items
-router.get('/', itemController.getAllItems);
+const app = express();
 
-// GET a single item by ID
-router.get('/:id', itemController.getItemById);
+const port = 7000;
 
-// POST a new item
-router.post('/', itemController.createItem);
+app.use(bodyParser.json());
+app.use(cors());
 
-// PUT (update) an item by ID
-router.put('/:id', itemController.updateItem);
+app.use('/', RouterPath);
 
-// DELETE an item by ID
-router.delete('/:id', itemController.deleteItem);
 
-module.exports = router;
+app.listen(port,()=>console.log('server is running on port 7000'));
 </file>
 
-<file path="src/mvc/front/api.js">
-// src/api.js
-import axios from 'axios';
+<file path="router.js">
+const express= require('express');
+const sqlDbconnect = require('./dbconnect');
 
-// The base URL for your backend API
-// This should match the port your server.js is running on (e.g., 5000)
-const API_BASE_URL = 'http://localhost:5000/api';
+const Router = express.Router();
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+Router.get('/data', (req, res) =>{
+    const userData= [{name:'John', age:30},
+                     {name:'Jane', age:25}
+                    ];
+    res.send(userData);
 });
 
-export const fetchData = async () => {
-  try {
-    const response = await api.get('/items'); // Adjusted to /api/items route
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    throw error;
-  }
-};
+Router.get('/info', (req, res) =>{
+    const userData= [{adress:'road1', age:30},
+                     {adress:'road2', age:25}
+                    ];
+    res.send(userData);
+});
 
-export const postData = async (newItem) => {
-  try {
-    const response = await api.post('/items', newItem); // Adjusted to /api/items route
-    return response.data;
-  } catch (error) {
-    console.error('Error posting data:', error);
-    throw error;
-  }
-};
+Router.get("/api/user", (req, res)=>{
+    sqlDbconnect.query("select * from  items",(err, rows)=>{
+        if(!err)
+            {
+            res.send(rows);
+        }else{
+            console.log(err);
+        }
+    });
+});
 
-export const updateData = async (id, updatedItem) => {
-  try {
-    const response = await api.put(`/items/${id}`, updatedItem); // Adjusted to /api/items/:id route
-    return response.data;
-  } catch (error) {
-    console.error('Error updating data:', error);
-    throw error;
-  }
-};
-
-export const deleteData = async (id) => {
-  try {
-    const response = await api.delete(`/items/${id}`); // Adjusted to /api/items/:id route
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting data:', error);
-    throw error;
-  }
-};
-
-export default api;
+module.exports = Router;
 </file>
 
 <file path=".eslintrc.cjs">
@@ -498,13 +342,77 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 </file>
 
 <file path="src/Pages/Local.jsx">
+// src/Pages/Local.jsx
+import  { useState, useEffect } from 'react';
+import axios from 'axios'; // Import axios
+
 function Local() {
+  const [data, setData] = useState([]); // State to hold data from '/data'
+  const [userInfo, setUserInfo] = useState([]); // State to hold data from '/api/user'
+  const [loading, setLoading] = useState(true); // Loading state
+  const [error, setError] = useState(null); // Error state
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch from /data
+        const responseData = await axios.get('http://localhost:7000/data');
+        setData(responseData.data);
+
+        // Fetch from /api/user
+        const responseUserInfo = await axios.get('http://localhost:7000/api/user');
+        setUserInfo(responseUserInfo.data);
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to fetch data. Please check the server and database connection.");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []); // Empty dependency array means this runs once on mount
+
+  if (loading) {
+    return <div className="local-page-container">Loading data...</div>;
+  }
+
+  if (error) {
+    return <div className="local-page-container" style={{ color: 'red' }}>Error: {error}</div>;
+  }
+
   return (
-    <div className="local-page-container"> 
+    <div className="local-page-container">
       <p>hi this is local page</p>
+
+      <h2>Data from `/data` endpoint:</h2>
+      {data.length > 0 ? (
+        <ul>
+          {data.map((item, index) => (
+            <li key={index}>Name: {item.name}, Age: {item.age}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>No data available from `/data`.</p>
+      )}
+
+      <h2>User Info from `/api/user` endpoint:</h2>
+      {userInfo.length > 0 ? (
+        <ul>
+          {userInfo.map((user, index) => (
+            <li key={index}>
+              ID: {user.id}, Name: {user.name} {/* Adjust these based on your 'items' table columns */}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No user info available from `/api/user`.</p>
+      )}
     </div>
   );
 }
+
 export default Local;
 </file>
 
@@ -728,59 +636,6 @@ function App() {
     "tailwindcss": "^3.4.1"
   }
 }
-</file>
-
-<file path="src/mvc/back/server.js">
-// src/mvc/back/server.js
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const morgan = require('morgan'); // For request logging
-const helmet = require('helmet'); // For security
-require('dotenv').config(); // Load environment variables from .env
-
-const itemRoutes = require('./routes/itemRoutes'); // Import item routes
-
-const app = express();
-const PORT = process.env.PORT || 5000; // Use port from .env or default to 5000
-
-// --- Middleware ---
-// Helmet helps secure Express apps by setting various HTTP headers
-app.use(helmet());
-// CORS for cross-origin requests (allow frontend to connect)
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Adjust this to your frontend's actual URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true,
-}));
-// Morgan for logging HTTP requests
-app.use(morgan('dev')); // 'dev' format is concise, color-coded for development
-// Body-parser to parse JSON request bodies
-app.use(bodyParser.json());
-// Body-parser to parse URL-encoded request bodies (optional, good practice)
-app.use(bodyParser.urlencoded({ extended: true }));
-
-
-// --- Routes ---
-app.get('/', (req, res) => {
-  res.send('Welcome to the MVC Backend API!');
-});
-
-// Item API routes
-app.use('/api/items', itemRoutes);
-
-
-// --- Error Handling Middleware (Optional but recommended) ---
-app.use((err, req, res) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
-});
-
-
-// --- Start Server ---
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
 </file>
 
 </files>
