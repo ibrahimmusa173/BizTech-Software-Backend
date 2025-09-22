@@ -3,7 +3,19 @@ const sqlDbconnect = require('./dbconnect');
 
 const Router = express.Router();
 
+Router.get('/data', (req, res) =>{
+    const userData= [{name:'John', age:30},
+                     {name:'Jane', age:25}
+                    ];
+    res.send(userData);
+});
 
+Router.get('/info', (req, res) =>{
+    const userData= [{adress:'road1', age:30},
+                     {adress:'road2', age:25}
+                    ];
+    res.send(userData);
+});
 
 // GET all items
 Router.get("/api/user", (req, res)=>{
