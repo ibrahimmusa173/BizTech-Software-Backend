@@ -8,7 +8,8 @@ function ItemUpdatePage() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
+  // Initialize price as an empty string or 0, depending on desired default for the input
+  const [price, setPrice] = useState(''); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
@@ -18,9 +19,10 @@ function ItemUpdatePage() {
       try {
         const response = await axios.get(`http://localhost:7000/api/items/${id}`);
         const item = response.data;
-        setName(item.name);
-        setDescription(item.description);
-        setPrice(item.price);
+        setName(item.name || ''); // Ensure name is at least an empty string
+        setDescription(item.description || ''); // Ensure description is at least an empty string
+        // Crucial change: Ensure price is a number or an empty string
+        setPrice(item.price != null ? item.price.toString() : ''); 
         setLoading(false);
       } catch (err) {
         console.error("Error fetching item for update:", err);
@@ -37,10 +39,17 @@ function ItemUpdatePage() {
     setError('');
 
     try {
+      // Validate price input before sending
+      const parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice)) {
+        setError("Price must be a valid number.");
+        return;
+      }
+
       const response = await axios.put(`http://localhost:7000/api/items/${id}`, {
         name,
         description,
-        price: parseFloat(price),
+        price: parsedPrice, // Use the validated and parsed price
       });
       setMessage(response.data.message || 'Item updated successfully!');
       setTimeout(() => {
@@ -98,7 +107,7 @@ function ItemUpdatePage() {
             type="number"
             id="price"
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-            value={price}
+            value={price} // Keep it as a string for type="number" input
             onChange={(e) => setPrice(e.target.value)}
             step="0.01"
             required
@@ -115,8 +124,8 @@ function ItemUpdatePage() {
       </form>
       {message && <p className="text-green-500 text-sm italic">{message}</p>}
       {error && <p className="text-red-500 text-sm italic">{error}</p>}
-      <button 
-        onClick={() => navigate('/')} 
+      <button
+        onClick={() => navigate('/')}
         className="mt-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
       >
         Cancel

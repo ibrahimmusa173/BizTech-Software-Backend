@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link and useNavigate
 
 function Local() {
-  const [data, setData] = useState([]); // State to hold data from '/data'
+  
   const [userInfo, setUserInfo] = useState([]); // State to hold data from '/api/user' (now items)
   const [loading, setLoading] = useState(true); // Loading state
   const [error, setError] = useState(null); // Error state
@@ -12,18 +12,15 @@ function Local() {
 
   const fetchData = async () => {
     try {
-      // Fetch from /data
-      const responseData = await axios.get('http://localhost:7000/data');
-      setData(responseData.data);
-
-      // Fetch from /api/user (which now represents 'items')
-      const responseUserInfo = await axios.get('http://localhost:7000/api/user');
+      // Fetch from /api/items
+      // CORRECTED: Changed endpoint from '/api/user' to '/api/items'
+      const responseUserInfo = await axios.get('http://localhost:7000/api/items'); 
       setUserInfo(responseUserInfo.data);
 
       setLoading(false);
     } catch (err) {
       console.error("Error fetching data:", err);
-      setError("Failed to fetch data. Please check the server and database connection.");
+      setError(err.response?.data?.message || "Failed to fetch data. Please check the server and database connection.");
       setLoading(false);
     }
   };
@@ -59,20 +56,9 @@ function Local() {
 
   return (
     <div className="container mx-auto p-4">
-      <p className="text-xl font-semibold mb-4">Hi, this is the local page</p>
+      
 
-      <h2 className="text-xl font-bold mb-2">Data from `/data` endpoint:</h2>
-      {data.length > 0 ? (
-        <ul className="list-disc list-inside mb-6">
-          {data.map((item, index) => (
-            <li key={index}>Name: {item.name}, Age: {item.age}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mb-6">No data available from `/data`.</p>
-      )}
-
-      <h2 className="text-xl font-bold mb-2">Items from `/api/user` (database) endpoint:</h2>
+      <h2 className="text-xl font-bold mb-2">Items from database endpoint:</h2> {/* Updated text for clarity */}
       <Link 
         to="/add-item" 
         className="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mb-4"
@@ -86,27 +72,27 @@ function Local() {
               <tr>
                 <th className="py-2 px-4 border-b">ID</th>
                 <th className="py-2 px-4 border-b">Name</th>
-                <th className="py-2 px-4 border-b">Description</th> {/* Add this */}
-                <th className="py-2 px-4 border-b">Price</th>       {/* Add this */}
+                <th className="py-2 px-4 border-b">Description</th>
+                <th className="py-2 px-4 border-b">Price</th>
                 <th className="py-2 px-4 border-b">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {userInfo.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border-b">{user.id}</td>
-                  <td className="py-2 px-4 border-b">{user.name}</td>
-                  <td className="py-2 px-4 border-b">{user.description}</td> {/* Adjust these based on your 'items' table columns */}
-                  <td className="py-2 px-4 border-b">{user.price}</td>       {/* Adjust these based on your 'items' table columns */}
+              {userInfo.map((item) => ( // Changed 'user' to 'item' for semantic clarity
+                <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="py-2 px-4 border-b">{item.id}</td>
+                  <td className="py-2 px-4 border-b">{item.name}</td>
+                  <td className="py-2 px-4 border-b">{item.description}</td>
+                  <td className="py-2 px-4 border-b">{item.price}</td>
                   <td className="py-2 px-4 border-b">
                     <button 
-                      onClick={() => handleEdit(user.id)}
+                      onClick={() => handleEdit(item.id)}
                       className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded text-sm mr-2"
                     >
                       Edit
                     </button>
                     <button 
-                      onClick={() => handleDelete(user.id)}
+                      onClick={() => handleDelete(item.id)}
                       className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm"
                     >
                       Delete

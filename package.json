@@ -34,8 +34,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "server": "nodemon src/mvc/back/server.js",
-    "server:prod": "node src/mvc/back/server.js",
+    "server": "nodemon backend/app.js",
+    "server:prod": "node backend/app.js",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
     "build": "react-scripts build",
     "test": "react-scripts test",
