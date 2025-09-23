@@ -1,7 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const itemRoutes = require('./routes/itemRoutes'); // Import the new item routes
+const itemRoutes = require('./routes/itemRoutes');
+const authRoutes = require('./routes/authRoutes'); // Import auth routes
+const dotenv = require('dotenv'); // To load environment variables
+
+dotenv.config(); // Load .env file
 
 const app = express();
 const port = 7000;
@@ -11,7 +15,8 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // API Routes
-app.use('/api', itemRoutes); // All item-related routes will now be under /api
+app.use('/api', itemRoutes);
+app.use('/api/auth', authRoutes); // All authentication routes under /api/auth
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
@@ -21,4 +26,4 @@ app.get('/', (req, res) => {
 // Start the server
 app.listen(port, () => console.log(`Server is running on port ${port}`));
 
-module.exports = app; // Export app for potential testing or further modularity
+module.exports = app;
