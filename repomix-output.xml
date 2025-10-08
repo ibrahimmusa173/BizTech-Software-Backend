@@ -40,10 +40,8 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
-.eslintrc.cjs
 .gitattributes
 .gitignore
-App.css
 backend/.env
 backend/app.js
 backend/config/db.js
@@ -55,49 +53,87 @@ backend/routes/authRoutes.js
 backend/routes/itemRoutes.js
 backend/utils/emailService.js
 package.json
-postcss.config.js
-public/index.html
-public/vite.svg
-README.md
-src/App.jsx
-src/assets/react.svg
-src/index.css
-src/index.js
-src/Pages/Auth/ForgotPasswordPage.jsx
-src/Pages/Auth/LoginPage.jsx
-src/Pages/Auth/RegisterPage.jsx
-src/Pages/Auth/ResetPasswordPage.jsx
-src/Pages/DataPostPage.jsx
-src/Pages/ItemUpdatePage.jsx
-src/Pages/Local.jsx
-tailwind.config.js
-vite.config.js
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
 
+<file path=".gitattributes">
+# Auto detect text files and perform LF normalization
+* text=auto
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
 <file path="backend/.env">
 # For JWT
 JWT_SECRET=your_extremely_strong_and_long_jwt_secret_key_that_is_unique_to_your_application_and_never_hardcoded_in_production
 
-# For Email Service (Nodemailer)
-# Example for Mailtrap (useful for development)
+# --- CHOOSE ONE OF THE FOLLOWING BLOCKS ---
+
+# Option 1: For Mailtrap (recommended for development)
 EMAIL_HOST=smtp.mailtrap.io
 EMAIL_PORT=2525
-EMAIL_USER=your_mailtrap_username
-EMAIL_PASS=your_mailtrap_password
+EMAIL_USER=your_mailtrap_username_here # <-- REPLACE THIS
+EMAIL_PASS=your_mailtrap_password_here # <-- REPLACE THIS
 EMAIL_FROM=no-reply@yourdomain.com
 
-# Example for Gmail (less recommended for production, requires "App passwords" for security)
+# Option 2: For Gmail (requires "App passwords", less recommended for production)
 # EMAIL_HOST=smtp.gmail.com
 # EMAIL_PORT=587
-# EMAIL_USER=your_gmail_address@gmail.com
-# EMAIL_PASS=your_gmail_app_password
+# EMAIL_USER=your_gmail_address@gmail.com # <-- REPLACE THIS
+# EMAIL_PASS=your_gmail_app_password_here # <-- REPLACE THIS with the 16-character app password
 # EMAIL_FROM=your_gmail_address@gmail.com
 
 # Your Frontend URL (important for password reset links)
-FRONTEND_URL=http://localhost:5173
+# FRONTEND_URL=http://localhost:5173
+</file>
+
+<file path="backend/config/db.js">
+const mysql = require('mysql');
+
+const sqlconnect = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'practice_db',
+    multipleStatements: true
+});
+
+sqlconnect.connect((err) => {
+    if (!err) {
+        console.log('DB connection succeeded');
+    } else {
+        console.error('DB connection failed:', err.message);
+    }
+});
+
+module.exports = sqlconnect;
 </file>
 
 <file path="backend/controllers/authController.js">
@@ -248,6 +284,86 @@ const authController = {
 module.exports = authController;
 </file>
 
+<file path="backend/controllers/itemController.js">
+const Item = require('../models/Item'); // Import the Item model
+
+const itemController = {
+    getAllItems: (req, res) => {
+        Item.getAll((err, rows) => {
+            if (!err) {
+                res.status(200).send(rows);
+            } else {
+                console.error('Error in getAllItems:', err);
+                res.status(500).send({ message: "Error fetching data from database.", error: err.message });
+            }
+        });
+    },
+
+    getItemById: (req, res) => {
+        const { id } = req.params;
+        Item.getById(id, (err, rows) => {
+            if (!err) {
+                if (rows.length > 0) {
+                    res.status(200).send(rows[0]);
+                } else {
+                    res.status(404).send({ message: "Item not found." });
+                }
+            } else {
+                console.error('Error in getItemById:', err);
+                res.status(500).send({ message: "Error fetching item.", error: err.message });
+            }
+        });
+    },
+
+    createItem: (req, res) => {
+        const itemData = req.body;
+        Item.create(itemData, (err, result) => {
+            if (!err) {
+                res.status(201).send({ message: "Item added successfully!", id: result.insertId });
+            } else {
+                console.error('Error in createItem:', err);
+                res.status(500).send({ message: "Error adding item to database.", error: err.message });
+            }
+        });
+    },
+
+    updateItem: (req, res) => {
+        const { id } = req.params;
+        const itemData = req.body;
+        Item.update(id, itemData, (err, result) => {
+            if (!err) {
+                if (result.affectedRows === 0) {
+                    res.status(404).send({ message: "Item not found for update." });
+                } else {
+                    res.status(200).send({ message: "Item updated successfully!" });
+                }
+            } else {
+                console.error('Error in updateItem:', err);
+                res.status(500).send({ message: "Error updating item.", error: err.message });
+            }
+        });
+    },
+
+    deleteItem: (req, res) => {
+        const { id } = req.params;
+        Item.delete(id, (err, result) => {
+            if (!err) {
+                if (result.affectedRows === 0) {
+                    res.status(404).send({ message: "Item not found for deletion." });
+                } else {
+                    res.status(200).send({ message: "Item deleted successfully!" });
+                }
+            } else {
+                console.error('Error in deleteItem:', err);
+                res.status(500).send({ message: "Error deleting item.", error: err.message });
+            }
+        });
+    }
+};
+
+module.exports = itemController;
+</file>
+
 <file path="backend/models/User.js">
 // backend/models/User.js
 const db = require('../config/db'); // Import the database connection
@@ -343,6 +459,22 @@ router.post("/reset-password/:token", authController.resetPassword); // New rout
 module.exports = router;
 </file>
 
+<file path="backend/routes/itemRoutes.js">
+const express = require('express');
+const itemController = require('../controllers/itemController'); // Import the item controller
+
+const router = express.Router();
+
+// Define routes and link them to controller methods
+router.get("/items", itemController.getAllItems);         // GET all items (was /api/user)
+router.get("/items/:id", itemController.getItemById);     // GET item by ID
+router.post("/items", itemController.createItem);         // POST a new item
+router.put("/items/:id", itemController.updateItem);      // PUT (update) an existing item
+router.delete("/items/:id", itemController.deleteItem);   // DELETE an item
+
+module.exports = router;
+</file>
+
 <file path="backend/utils/emailService.js">
 // backend/utils/emailService.js
 const nodemailer = require('nodemailer');
@@ -393,478 +525,41 @@ const sendPasswordResetEmail = async (toEmail, token) => {
 module.exports = { sendPasswordResetEmail };
 </file>
 
-<file path="src/Pages/Auth/ForgotPasswordPage.jsx">
-// src/Pages/Auth/ForgotPasswordPage.jsx
-import { useState } from 'react';
-import axios from 'axios'; // Assuming you'll use axios directly
-import { Link } from 'react-router-dom';
+<file path="backend/models/Item.js">
+// backend/models/Item.js
+const db = require('../config/db'); // Import the database connection
 
-function ForgotPasswordPage() {
-    const [email, setEmail] = useState('');
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
+const Item = {
+    getAll: (callback) => {
+        db.query("SELECT * FROM items", callback);
+    },
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setMessage('');
-        setError('');
-        try {
-            // Adjust the API endpoint if different
-            const response = await axios.post('http://localhost:7000/api/auth/forgot-password', { email });
-            setMessage(response.data.message);
-            // Clear the email input after sending the request
-            setEmail('');
-        } catch (err) {
-            setError(err.response?.data?.message || 'An error occurred. Please try again.');
-        }
-    };
+    getById: (id, callback) => {
+        db.query("SELECT * FROM items WHERE id = ?", [id], (err, rows) => {
+            if (err) return callback(err);
+            callback(null, rows);
+        });
+    },
 
-    return (
-        <div className="p-4 max-w-md mx-auto mt-10">
-            <h1 className="text-3xl font-bold mb-6 text-center">Forgot Password</h1>
-            <p className="text-center text-gray-600 mb-4">Enter your email address and we will send you a link to reset your password.</p>
-            {message && <p className="bg-green-100 text-green-700 p-3 rounded mb-4">{message}</p>}
-            {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
-            <form onSubmit={handleSubmit} className="space-y-4 bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-                <input
-                    type="email"
-                    placeholder="Your Email Address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                />
-                <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600 focus:outline-none focus:shadow-outline">
-                    Send Reset Link
-                </button>
-            </form>
-            <div className="text-center mt-4">
-                <Link to="/login" className="text-blue-500 hover:underline">Back to Login</Link>
-            </div>
-        </div>
-    );
-}
+    create: (itemData, callback) => {
+        const { name, description, price } = itemData;
+        const sql = "INSERT INTO items (name, description, price) VALUES (?, ?, ?)";
+        db.query(sql, [name, description, price], callback);
+    },
 
-export default ForgotPasswordPage;
-</file>
+    update: (id, itemData, callback) => {
+        const { name, description, price } = itemData;
+        const sql = "UPDATE items SET name = ?, description = ?, price = ? WHERE id = ?";
+        db.query(sql, [name, description, price, id], callback);
+    },
 
-<file path="src/Pages/Auth/LoginPage.jsx">
-// src/Pages/Auth/LoginPage.jsx
-import { useState } from 'react';
-import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
-
-function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    setError('');
-
-    try {
-      const response = await axios.post('http://localhost:7000/api/auth/login', {
-        email,
-        password,
-      });
-      // Store the token (e.g., in localStorage)
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user)); // Store user info
-
-      setMessage(response.data.message || 'Login successful!');
-      setTimeout(() => {
-        // Redirect based on user type or to a dashboard
-        if (response.data.user.user_type === 'admin') {
-          navigate('/admin/dashboard'); // Example admin dashboard
-        } else {
-          navigate('/'); // Redirect to home/tenders list
-        }
-      }, 1000);
-    } catch (err) {
-      console.error('Error during login:', err);
-      setError(err.response?.data?.message || 'Login failed. Invalid email or password.');
+    delete: (id, callback) => {
+        const sql = "DELETE FROM items WHERE id = ?";
+        db.query(sql, [id], callback);
     }
-  };
-
-  return (
-    <div className="container mx-auto p-4 max-w-md mt-10">
-      <h1 className="text-3xl font-bold mb-6 text-center">Login to BizTech Tenders</h1>
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-            Email:
-          </label>
-          <input
-            type="email"
-            id="email"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-            Password:
-          </label>
-          <input
-            type="password"
-            id="password"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Login
-          </button>
-          <Link
-            to="/forgot-password"
-            className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
-          >
-            Forgot Password?
-          </Link>
-        </div>
-      </form>
-      {message && <p className="text-green-500 text-sm italic mt-2 text-center">{message}</p>}
-      {error && <p className="text-red-500 text-sm italic mt-2 text-center">{error}</p>}
-      <p className="text-center text-gray-600 text-xs mt-4">
-        Dont have an account? <Link to="/register" className="text-blue-500 hover:text-blue-800">Register here</Link>.
-      </p>
-    </div>
-  );
-}
-
-export default LoginPage;
-</file>
-
-<file path="src/Pages/Auth/RegisterPage.jsx">
-// src/Pages/Auth/RegisterPage.jsx
-import { useState } from 'react';
-import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
-
-function RegisterPage() {
-  const [name, setName] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [userType, setUserType] = useState('client'); // Default to client
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    setError('');
-
-    try {
-      const response = await axios.post('http://localhost:7000/api/auth/register', {
-        name,
-        company_name: companyName,
-        email,
-        password,
-        user_type: userType,
-      });
-      setMessage(response.data.message || 'Registration successful! Please login.');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } catch (err) {
-      console.error('Error during registration:', err);
-      setError(err.response?.data?.message || 'Failed to register. Please try again.');
-    }
-  };
-
-  return (
-    <div className="container mx-auto p-4 max-w-md mt-10">
-      <h1 className="text-3xl font-bold mb-6 text-center">Register for BizTech Tenders</h1>
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
-            Full Name:
-          </label>
-          <input
-            type="text"
-            id="name"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="companyName">
-            Company Name (Optional):
-          </label>
-          <input
-            type="text"
-            id="companyName"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-            Email:
-          </label>
-          <input
-            type="email"
-            id="email"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-            Password:
-          </label>
-          <input
-            type="password"
-            id="password"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="userType">
-            Register as:
-          </label>
-          <select
-            id="userType"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={userType}
-            onChange={(e) => setUserType(e.target.value)}
-          >
-            <option value="client">Client (Post Tenders)</option>
-            <option value="bidder">Bidder (Submit Proposals)</option>
-            {/* Admin registration should be controlled, not publicly available */}
-          </select>
-        </div>
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Register
-          </button>
-        </div>
-      </form>
-      {message && <p className="text-green-500 text-sm italic mt-2 text-center">{message}</p>}
-      {error && <p className="text-red-500 text-sm italic mt-2 text-center">{error}</p>}
-      <p className="text-center text-gray-600 text-xs mt-4">
-        Already have an account? <Link to="/login" className="text-blue-500 hover:text-blue-800">Login here</Link>.
-      </p>
-    </div>
-  );
-}
-
-export default RegisterPage;
-</file>
-
-<file path="src/Pages/Auth/ResetPasswordPage.jsx">
-// src/Pages/Auth/ResetPasswordPage.jsx
-import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios'; // Assuming you'll use axios directly
-
-function ResetPasswordPage() {
-    const { token } = useParams(); // Gets the token from the URL
-    const navigate = useNavigate();
-
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            return;
-        }
-        if (password.length < 6) { // Client-side validation for password length
-            setError("Password must be at least 6 characters long.");
-            return;
-        }
-
-        setError('');
-        setMessage('');
-
-        try {
-            // Adjust the API endpoint if different
-            const response = await axios.post(`http://localhost:7000/api/auth/reset-password/${token}`, { newPassword: password });
-            setMessage(response.data.message + " Redirecting to login...");
-            setTimeout(() => navigate('/login'), 3000); // Redirect to login after 3 seconds
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to reset password. The link might be invalid or expired.');
-        }
-    };
-
-    return (
-        <div className="p-4 max-w-md mx-auto mt-10">
-            <h1 className="text-3xl font-bold mb-6 text-center">Reset Your Password</h1>
-            {message && <p className="bg-green-100 text-green-700 p-3 rounded mb-4">{message}</p>}
-            {error && <p className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</p>}
-            {!message && ( // Hide form after successful submission
-                <form onSubmit={handleSubmit} className="space-y-4 bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-                    <input
-                        type="password"
-                        placeholder="Enter new password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        required
-                    />
-                    <input
-                        type="password"
-                        placeholder="Confirm new password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        required
-                    />
-                    <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded w-full hover:bg-green-600 focus:outline-none focus:shadow-outline">
-                        Update Password
-                    </button>
-                </form>
-            )}
-             {message && (
-                <div className="text-center mt-4">
-                    <Link to="/login" className="text-blue-500 hover:underline">Go to Login Now</Link>
-                </div>
-            )}
-        </div>
-    );
-}
-
-export default ResetPasswordPage;
-</file>
-
-<file path=".eslintrc.cjs">
-module.exports = {
-  root: true,
-  env: {
-    browser: true,
-    node: true,         // ✅ Add this line
-    es2020: true
-  },
-  extends: [
-    'eslint:recommended',
-    'plugin:react/recommended',
-    'plugin:react/jsx-runtime',
-    'plugin:react-hooks/recommended',
-  ],
-  ignorePatterns: ['dist', '.eslintrc.cjs'],
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module'
-  },
-  settings: {
-    react: {
-      version: '18.2'
-    }
-  },
-  plugins: ['react-refresh'],
-  rules: {
-    'react-refresh/only-export-components': [
-      'warn',
-      { allowConstantExport: true },
-    ],
-  },
 };
-</file>
 
-<file path=".gitattributes">
-# Auto detect text files and perform LF normalization
-* text=auto
-</file>
-
-<file path=".gitignore">
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-</file>
-
-<file path="App.css">
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
+module.exports = Item;
 </file>
 
 <file path="backend/app.js">
@@ -899,794 +594,36 @@ app.listen(port, () => console.log(`Server is running on port ${port}`));
 module.exports = app;
 </file>
 
-<file path="backend/config/db.js">
-const mysql = require('mysql');
-
-const sqlconnect = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'practice_db',
-    multipleStatements: true
-});
-
-sqlconnect.connect((err) => {
-    if (!err) {
-        console.log('DB connection succeeded');
-    } else {
-        console.error('DB connection failed:', err.message);
-    }
-});
-
-module.exports = sqlconnect;
-</file>
-
-<file path="backend/controllers/itemController.js">
-const Item = require('../models/Item'); // Import the Item model
-
-const itemController = {
-    getAllItems: (req, res) => {
-        Item.getAll((err, rows) => {
-            if (!err) {
-                res.status(200).send(rows);
-            } else {
-                console.error('Error in getAllItems:', err);
-                res.status(500).send({ message: "Error fetching data from database.", error: err.message });
-            }
-        });
-    },
-
-    getItemById: (req, res) => {
-        const { id } = req.params;
-        Item.getById(id, (err, rows) => {
-            if (!err) {
-                if (rows.length > 0) {
-                    res.status(200).send(rows[0]);
-                } else {
-                    res.status(404).send({ message: "Item not found." });
-                }
-            } else {
-                console.error('Error in getItemById:', err);
-                res.status(500).send({ message: "Error fetching item.", error: err.message });
-            }
-        });
-    },
-
-    createItem: (req, res) => {
-        const itemData = req.body;
-        Item.create(itemData, (err, result) => {
-            if (!err) {
-                res.status(201).send({ message: "Item added successfully!", id: result.insertId });
-            } else {
-                console.error('Error in createItem:', err);
-                res.status(500).send({ message: "Error adding item to database.", error: err.message });
-            }
-        });
-    },
-
-    updateItem: (req, res) => {
-        const { id } = req.params;
-        const itemData = req.body;
-        Item.update(id, itemData, (err, result) => {
-            if (!err) {
-                if (result.affectedRows === 0) {
-                    res.status(404).send({ message: "Item not found for update." });
-                } else {
-                    res.status(200).send({ message: "Item updated successfully!" });
-                }
-            } else {
-                console.error('Error in updateItem:', err);
-                res.status(500).send({ message: "Error updating item.", error: err.message });
-            }
-        });
-    },
-
-    deleteItem: (req, res) => {
-        const { id } = req.params;
-        Item.delete(id, (err, result) => {
-            if (!err) {
-                if (result.affectedRows === 0) {
-                    res.status(404).send({ message: "Item not found for deletion." });
-                } else {
-                    res.status(200).send({ message: "Item deleted successfully!" });
-                }
-            } else {
-                console.error('Error in deleteItem:', err);
-                res.status(500).send({ message: "Error deleting item.", error: err.message });
-            }
-        });
-    }
-};
-
-module.exports = itemController;
-</file>
-
-<file path="backend/models/Item.js">
-// backend/models/User.js
-const db = require('../config/db'); // Import the database connection
-const bcrypt = require('bcryptjs'); // For password hashing
-
-const User = {
-    // Finds a user by email
-    findByEmail: (email, callback) => {
-        db.query("SELECT * FROM users WHERE email = ?", [email], callback);
-    },
-
-    // Creates a new user with hashed password
-    create: (userData, callback) => {
-        const { name, company_name, email, password, user_type } = userData;
-        // Hash password before storing
-        bcrypt.hash(password, 10, (err, hashedPassword) => {
-            if (err) return callback(err);
-
-            const sql = "INSERT INTO users (name, company_name, email, password, user_type) VALUES (?, ?, ?, ?, ?)";
-            db.query(sql, [name, company_name, email, hashedPassword, user_type], callback);
-        });
-    },
-
-    // Dummy method for getting all users (can be expanded for admin view)
-    getAll: (callback) => {
-        db.query("SELECT id, name, company_name, email, user_type FROM users", callback);
-    },
-
-    // You can add more user-related methods here (e.g., update profile, delete user)
-};
-
-module.exports = User;
-</file>
-
-<file path="backend/routes/itemRoutes.js">
-const express = require('express');
-const itemController = require('../controllers/itemController'); // Import the item controller
-
-const router = express.Router();
-
-// Define routes and link them to controller methods
-router.get("/items", itemController.getAllItems);         // GET all items (was /api/user)
-router.get("/items/:id", itemController.getItemById);     // GET item by ID
-router.post("/items", itemController.createItem);         // POST a new item
-router.put("/items/:id", itemController.updateItem);      // PUT (update) an existing item
-router.delete("/items/:id", itemController.deleteItem);   // DELETE an item
-
-module.exports = router;
-</file>
-
-<file path="postcss.config.js">
-export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}
-</file>
-
-<file path="public/index.html">
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <title>Vite + React</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
-</file>
-
-<file path="public/vite.svg">
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
-</file>
-
-<file path="README.md">
-# React + Vite + TailWindCSS - A Template Repo
-
-It is a template repository for you to start a project using React and TailwindCSS. You just need to create a new repository from this template repo by clicking the button at the top right corner of this page.
-
-## Watch This Video
-
-https://www.youtube.com/watch?v=Zk2YJUvfsOA
-
-## Links
-
-- Install Node.js: https://nodejs.org/en
-- Install Vite: https://vitejs.dev/
-- TailwindCSS: https://tailwindcss.com/
-- How to Learn TailwindCSS?: https://www.youtube.com/shorts/BhasK2BPn8c
-</file>
-
-<file path="src/assets/react.svg">
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
-</file>
-
-<file path="src/index.css">
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-</file>
-
-<file path="src/Pages/DataPostPage.jsx">
-// src/Pages/DataPostPage.jsx
-import { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-
-function DataPostPage() {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState(''); // Assuming you have a 'description' column
-  const [price, setPrice] = useState(''); // Assuming a 'price' column
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    setError('');
-
-    try {
-      const response = await axios.post('http://localhost:7000/api/items', {
-        name,
-        description,
-        price: parseFloat(price), // Ensure price is a number
-      });
-      setMessage(response.data.message || 'Item added successfully!');
-      setName('');
-      setDescription('');
-      setPrice('');
-      // Optionally navigate back to the Local page after successful post
-      navigate('/'); 
-    } catch (err) {
-      console.error('Error posting data:', err);
-      setError(err.response?.data?.message || 'Failed to add item. Please try again.');
-    }
-  };
-
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Add New Item</h1>
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
-            Item Name:
-          </label>
-          <input
-            type="text"
-            id="name"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
-            Description:
-          </label>
-          <input
-            type="text"
-            id="description"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="price">
-            Price:
-          </label>
-          <input
-            type="number"
-            id="price"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            step="0.01" // Allows decimal values
-            required
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Add Item
-          </button>
-        </div>
-      </form>
-      {message && <p className="text-green-500 text-sm italic">{message}</p>}
-      {error && <p className="text-red-500 text-sm italic">{error}</p>}
-      <button 
-        onClick={() => navigate('/')} 
-        className="mt-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-      >
-        Back to Local Page
-      </button>
-    </div>
-  );
-}
-
-export default DataPostPage;
-</file>
-
-<file path="tailwind.config.js">
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}"
-  ],
-  theme: {
-    extend: {
-
-      textShadow: {
-        'blue': '5px 5px 10px blue',
-      },
-
-      keyframes: {
-        'tilt-shaking': {
-          '0%': { transform: 'rotate(0deg)' },
-          '25%': { transform: 'rotate(5deg)' },
-          '50%': { transform: 'rotate(0deg)' },
-          '75%': { transform: 'rotate(-5deg)' },
-          '100%': { transform: 'rotate(0deg)' },
-        },
-      
-        'colorAnimate': {
-          '0%': { borderColor: 'salmon' },
-          '25%': { borderColor: '#e18ce1' },
-          '50%': { borderColor: 'paleturquoise' },
-          '75%': { borderColor: 'green' },
-          '100%': { borderColor: 'yellow' }
-        },
-      },
-
-
-      animation: {
-        'tilt-shaking': 'tilt-shaking 0.8s ease infinite',
-        'color-animate': 'colorAnimate 5s ease-in 1s infinite',  
-      }
-
-    },
-  },
-  plugins: [],
-}
-</file>
-
-<file path="vite.config.js">
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-})
-</file>
-
-<file path="src/index.js">
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-import './index.css';
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
-</file>
-
-<file path="src/Pages/ItemUpdatePage.jsx">
-// src/Pages/ItemUpdatePage.jsx
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useParams, useNavigate } from 'react-router-dom';
-
-function ItemUpdatePage() {
-  const { id } = useParams(); // Get the ID from the URL
-  const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  // Initialize price as an empty string or 0, depending on desired default for the input
-  const [price, setPrice] = useState(''); 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    const fetchItem = async () => {
-      try {
-        const response = await axios.get(`http://localhost:7000/api/items/${id}`);
-        const item = response.data;
-        setName(item.name || ''); // Ensure name is at least an empty string
-        setDescription(item.description || ''); // Ensure description is at least an empty string
-        // Crucial change: Ensure price is a number or an empty string
-        setPrice(item.price != null ? item.price.toString() : ''); 
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching item for update:", err);
-        setError("Failed to load item for editing.");
-        setLoading(false);
-      }
-    };
-    fetchItem();
-  }, [id]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    setError('');
-
-    try {
-      // Validate price input before sending
-      const parsedPrice = parseFloat(price);
-      if (isNaN(parsedPrice)) {
-        setError("Price must be a valid number.");
-        return;
-      }
-
-      const response = await axios.put(`http://localhost:7000/api/items/${id}`, {
-        name,
-        description,
-        price: parsedPrice, // Use the validated and parsed price
-      });
-      setMessage(response.data.message || 'Item updated successfully!');
-      setTimeout(() => {
-        navigate('/'); // Navigate back to the local page after a short delay
-      }, 1500);
-    } catch (err) {
-      console.error('Error updating item:', err);
-      setError(err.response?.data?.message || 'Failed to update item. Please try again.');
-    }
-  };
-
-  if (loading) {
-    return <div className="container mx-auto p-4">Loading item data...</div>;
-  }
-
-  if (error) {
-    return <div className="container mx-auto p-4 text-red-500">Error: {error}</div>;
-  }
-
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Edit Item (ID: {id})</h1>
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
-            Item Name:
-          </label>
-          <input
-            type="text"
-            id="name"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
-            Description:
-          </label>
-          <input
-            type="text"
-            id="description"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </div>
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="price">
-            Price:
-          </label>
-          <input
-            type="number"
-            id="price"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-            value={price} // Keep it as a string for type="number" input
-            onChange={(e) => setPrice(e.target.value)}
-            step="0.01"
-            required
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Update Item
-          </button>
-        </div>
-      </form>
-      {message && <p className="text-green-500 text-sm italic">{message}</p>}
-      {error && <p className="text-red-500 text-sm italic">{error}</p>}
-      <button
-        onClick={() => navigate('/')}
-        className="mt-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-      >
-        Cancel
-      </button>
-    </div>
-  );
-}
-
-export default ItemUpdatePage;
-</file>
-
-<file path="src/Pages/Local.jsx">
-// src/Pages/Local.jsx
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom'; // Import Link and useNavigate
-
-function Local() {
-  
-  const [userInfo, setUserInfo] = useState([]); // State to hold data from '/api/user' (now items)
-  const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState(null); // Error state
-  const [currentUser, setCurrentUser] = useState(null); // State to hold current logged-in user info
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check for logged-in user on component mount
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-    fetchData();
-  }, []); // Empty dependency array means this runs once on mount
-
-  const fetchData = async () => {
-    try {
-      const responseUserInfo = await axios.get('http://localhost:7000/api/items'); 
-      setUserInfo(responseUserInfo.data);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(err.response?.data?.message || "Failed to fetch data. Please check the server and database connection.");
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
-      try {
-        // You might want to add token to headers for authorized delete
-        const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:7000/api/items/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        alert("Item deleted successfully!");
-        fetchData(); // Re-fetch data to update the list
-      } catch (err) {
-        console.error("Error deleting item:", err);
-        alert(err.response?.data?.message || "Failed to delete item.");
-      }
-    }
-  };
-
-  const handleEdit = (id) => {
-    navigate(`/edit-item/${id}`); // Navigate to a new page for editing
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token'); // Remove the JWT token
-    localStorage.removeItem('user');  // Remove user information
-    setCurrentUser(null);             // Clear current user state
-    navigate('/login');               // Redirect to login page
-    alert('You have been logged out.');
-  };
-
-  if (loading) {
-    return <div className="local-page-container">Loading data...</div>;
-  }
-
-  if (error) {
-    return <div className="local-page-container" style={{ color: 'red' }}>Error: {error}</div>;
-  }
-
-  return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">BizTech Tenders</h1>
-        {currentUser ? (
-          <div className="flex items-center">
-            <span className="mr-4">Welcome, {currentUser.name} ({currentUser.user_type})</span>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              Logout
-            </button>
-          </div>
-        ) : (
-          <div>
-            <Link to="/login" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
-              Login
-            </Link>
-            <Link to="/register" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-              Register
-            </Link>
-          </div>
-        )}
-      </div>
-
-      <h2 className="text-xl font-bold mb-2">Items from database endpoint:</h2>
-      {currentUser && (currentUser.user_type === 'admin' || currentUser.user_type === 'client') && (
-         <Link 
-         to="/add-item" 
-         className="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mb-4"
-       >
-         Add New Item
-       </Link>
-      )}
-     
-      {userInfo.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 border-b">ID</th>
-                <th className="py-2 px-4 border-b">Name</th>
-                <th className="py-2 px-4 border-b">Description</th>
-                <th className="py-2 px-4 border-b">Price</th>
-                <th className="py-2 px-4 border-b">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {userInfo.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border-b">{item.id}</td>
-                  <td className="py-2 px-4 border-b">{item.name}</td>
-                  <td className="py-2 px-4 border-b">{item.description}</td>
-                  <td className="py-2 px-4 border-b">{item.price}</td>
-                  <td className="py-2 px-4 border-b">
-                    {currentUser && (currentUser.user_type === 'admin' || currentUser.user_type === 'client') && (
-                        <>
-                          <button 
-                            onClick={() => handleEdit(item.id)}
-                            className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded text-sm mr-2"
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(item.id)}
-                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm"
-                          >
-                            Delete
-                          </button>
-                        </>
-                    )}
-                     {/* Bidders might see a "Place Bid" button, etc. */}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p>No items available from the database.</p>
-      )}
-    </div>
-  );
-}
-
-export default Local;
-</file>
-
-<file path="src/App.jsx">
-// src/App.jsx
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Local from './Pages/Local'; // This will become our "Tenders List" or similar
-import DataPostPage from './Pages/DataPostPage';
-import ItemUpdatePage from './Pages/ItemUpdatePage';
-import RegisterPage from './Pages/Auth/RegisterPage'; // New component
-import LoginPage from './Pages/Auth/LoginPage';     // New component
-import ForgotPasswordPage from './Pages/Auth/ForgotPasswordPage'; // NEW IMPORT
-import ResetPasswordPage from './Pages/Auth/ResetPasswordPage';   // NEW IMPORT
-
-function App() {
-   return (
-            <Router>
-              <div className="min-h-screen bg-gray-100">
-           <Routes>
-            <Route path="/" element={<Local />} />
-            <Route path="/add-item" element={<DataPostPage />} />
-            <Route path="/edit-item/:id" element={<ItemUpdatePage />} />
-            <Route path="/register" element={<RegisterPage />} /> {/* New route */}
-            <Route path="/login" element={<LoginPage />} />       {/* New route */}
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} /> {/* NEW ROUTE */}
-            <Route path="/reset-password/:token" element={<ResetPasswordPage />} /> {/* NEW ROUTE */}
-            <Route path="*" element={<h1 className="text-center text-3xl mt-20">404: Page Not Found</h1>} />
-          </Routes>
-         </div>
-    </Router>
-   );
- }
-
- export default App;
-</file>
-
 <file path="package.json">
 {
-  "name": "practice",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "@reduxjs/toolkit": "^2.8.2",
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.12.2",
-    "bcrypt": "^6.0.0",
-    "bcryptjs": "^3.0.2",
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
-    "express": "^5.1.0",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.1",
-    "multer": "^2.0.2",
-    "mysql": "^2.18.1",
-    "mysql2": "^3.14.5",
-    "nodemailer": "^7.0.6",
-    "path": "^0.12.7",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-hook-form": "^7.56.4",
-    "react-redux": "^9.2.0",
-    "react-router-dom": "^7.6.1",
-    "react-scripts": "5.0.1",
-    "redux": "^5.0.1",
-    "sql": "^0.78.0",
-    "web-vitals": "^2.1.4"
-  },
+  "name": "backend-only-app",
+  "version": "1.0.0",
+  "description": "A backend-only application for managing items and user authentication.",
+  "main": "backend/app.js",
   "scripts": {
-    "start": "react-scripts start",
-    "server": "nodemon backend/app.js",
-    "server:prod": "node backend/app.js",
-    "dev": "concurrently \"npm run server\" \"npm run start\"",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "node backend/app.js",
+    "dev": "nodemon backend/app.js"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "keywords": [
+    "express",
+    "mysql",
+    "auth",
+    "api"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql": "^2.18.1",
+    "nodemailer": "^6.9.14"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.8",
-    "autoprefixer": "^10.4.21",
-    "concurrently": "^9.2.1",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "nodemon": "^3.1.10",
-    "postcss": "^8.5.4",
-    "tailwindcss": "^3.4.1"
+    "nodemon": "^3.1.4"
   }
 }
 </file>
