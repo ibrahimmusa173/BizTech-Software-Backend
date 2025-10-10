@@ -1,11 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const itemRoutes = require('./routes/itemRoutes');
-const authRoutes = require('./routes/authRoutes'); // Import auth routes
-const dotenv = require('dotenv'); // To load environment variables
+const authRoutes = require('./routes/authRoutes');
+const tenderRoutes = require('./routes/tenderRoutes'); // New tender routes
+const proposalRoutes = require('./routes/proposalRoutes'); // New proposal routes
+const dotenv = require('dotenv');
 
-dotenv.config(); // Load .env file
+dotenv.config();
 
 const app = express();
 const port = 7000;
@@ -15,12 +16,13 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // API Routes
-app.use('/api', itemRoutes);
-app.use('/api/auth', authRoutes); // All authentication routes under /api/auth
+app.use('/api/auth', authRoutes); // Shared authentication routes
+app.use('/api', tenderRoutes);    // Tender related routes
+app.use('/api', proposalRoutes);  // Proposal related routes
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
-    res.send('Server is running and ready for API requests!');
+    res.send('BizTech Group Platform Backend is running!');
 });
 
 // Start the server

@@ -47,10 +47,14 @@ backend/app.js
 backend/config/db.js
 backend/controllers/authController.js
 backend/controllers/itemController.js
+backend/controllers/proposalController.js
+backend/controllers/tenderController.js
 backend/models/Item.js
 backend/models/User.js
 backend/routes/authRoutes.js
 backend/routes/itemRoutes.js
+backend/routes/proposalRoutes.js
+backend/routes/tenderRoutes.js
 backend/utils/emailService.js
 package.json
 </directory_structure>
@@ -88,30 +92,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-</file>
-
-<file path="backend/.env">
-# For JWT
-JWT_SECRET=your_extremely_strong_and_long_jwt_secret_key_that_is_unique_to_your_application_and_never_hardcoded_in_production
-
-# --- CHOOSE ONE OF THE FOLLOWING BLOCKS ---
-
-# Option 1: For Mailtrap (recommended for development)
-EMAIL_HOST=smtp.mailtrap.io
-EMAIL_PORT=2525
-EMAIL_USER=your_mailtrap_username_here # <-- REPLACE THIS
-EMAIL_PASS=your_mailtrap_password_here # <-- REPLACE THIS
-EMAIL_FROM=no-reply@yourdomain.com
-
-# Option 2: For Gmail (requires "App passwords", less recommended for production)
-# EMAIL_HOST=smtp.gmail.com
-# EMAIL_PORT=587
-# EMAIL_USER=your_gmail_address@gmail.com # <-- REPLACE THIS
-# EMAIL_PASS=your_gmail_app_password_here # <-- REPLACE THIS with the 16-character app password
-# EMAIL_FROM=your_gmail_address@gmail.com
-
-# Your Frontend URL (important for password reset links)
-# FRONTEND_URL=http://localhost:5173
 </file>
 
 <file path="backend/config/db.js">
@@ -525,6 +505,415 @@ const sendPasswordResetEmail = async (toEmail, token) => {
 module.exports = { sendPasswordResetEmail };
 </file>
 
+<file path="backend/.env">
+# For JWT
+JWT_SECRET=your_extremely_strong_and_long_jwt_secret_key_that_is_unique_to_your_application_and_never_hardcoded_in_production
+
+# --- CHOOSE ONE OF THE FOLLOWING BLOCKS ---
+
+# Option 1: For Mailtrap (recommended for development)
+EMAIL_HOST=smtp.mailtrap.io
+EMAIL_PORT=2525
+EMAIL_USER=your_mailtrap_username_here # <-- REPLACE THIS
+EMAIL_PASS=your_mailtrap_password_here # <-- REPLACE THIS
+EMAIL_FROM=no-reply@yourdomain.com
+
+# Option 2: For Gmail (requires "App passwords", less recommended for production)
+# EMAIL_HOST=smtp.gmail.com
+# EMAIL_PORT=587
+# EMAIL_USER=your_gmail_address@gmail.com # <-- REPLACE THIS
+# EMAIL_PASS=your_gmail_app_password_here # <-- REPLACE THIS with the 16-character app password
+# EMAIL_FROM=your_gmail_address@gmail.com
+
+# Your Frontend URL (important for password reset links)
+# FRONTEND_URL=http://localhost:5173
+</file>
+
+<file path="backend/controllers/proposalController.js">
+// backend/controllers/proposalController.js
+const Proposal = require('../models/Proposal');
+const Tender = require('../models/Tender'); // To update tender status
+
+const proposalController = {
+    // Vendor specific: Submit a proposal
+    submitProposal: (req, res) => {
+        const { tender_id, proposal_text, proposed_budget } = req.body;
+        const vendor_id = req.user.id;
+
+        if (!tender_id || !proposal_text || !proposed_budget) {
+            return res.status(400).send({ message: "All proposal fields are required." });
+        }
+
+        // Check if tender is open before submitting a proposal
+        Tender.getById(tender_id, (err, tender) => {
+            if (err) {
+                if (err.kind === "not_found") {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+                console.error('Error fetching tender for proposal submission:', err);
+                return res.status(500).send({ message: "Error submitting proposal: Tender check failed." });
+            }
+
+            if (tender.status !== 'open') {
+                return res.status(400).send({ message: "Cannot submit proposal for a tender that is not open." });
+            }
+
+            const proposalData = { tender_id, vendor_id, proposal_text, proposed_budget };
+            Proposal.create(proposalData, (err, result) => {
+                if (err) {
+                    console.error('Error submitting proposal:', err);
+                    return res.status(500).send({ message: "Error submitting proposal.", error: err.message });
+                }
+                res.status(201).send({ message: "Proposal submitted successfully!", proposalId: result.insertId });
+            });
+        });
+    },
+
+    // Vendor specific: View their own proposals
+    getVendorProposals: (req, res) => {
+        const vendor_id = req.user.id;
+        Proposal.getByVendorId(vendor_id, (err, proposals) => {
+            if (err) {
+                console.error('Error fetching vendor proposals:', err);
+                return res.status(500).send({ message: "Error fetching your proposals.", error: err.message });
+            }
+            res.status(200).send(proposals);
+        });
+    },
+
+    // Client specific: View proposals for their tender
+    getProposalsForTender: (req, res) => {
+        const { tenderId } = req.params;
+        const client_id = req.user.id;
+
+        // Verify the logged-in client owns this tender
+        Tender.getById(tenderId, (err, tender) => {
+            if (err) {
+                if (err.kind === "not_found") {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+                console.error('Error fetching tender for proposals:', err);
+                return res.status(500).send({ message: "Error fetching proposals: Tender check failed." });
+            }
+
+            if (tender.client_id !== client_id) {
+                return res.status(403).send({ message: "Forbidden: You can only view proposals for your own tenders." });
+            }
+
+            Proposal.getByTenderId(tenderId, (err, proposals) => {
+                if (err) {
+                    console.error('Error fetching proposals for tender:', err);
+                    return res.status(500).send({ message: "Error fetching proposals.", error: err.message });
+                }
+                res.status(200).send(proposals);
+            });
+        });
+    },
+
+    // Client specific: Accept/Reject a proposal
+    updateProposalStatus: (req, res) => {
+        const { proposalId } = req.params;
+        const { status } = req.body; // 'accepted' or 'rejected'
+        const client_id = req.user.id;
+
+        if (!['accepted', 'rejected'].includes(status)) {
+            return res.status(400).send({ message: "Invalid proposal status." });
+        }
+
+        Proposal.getById(proposalId, (err, proposal) => {
+            if (err) {
+                if (err.kind === "not_found") {
+                    return res.status(404).send({ message: "Proposal not found." });
+                }
+                console.error('Error fetching proposal for status update:', err);
+                return res.status(500).send({ message: "Error updating proposal status: Proposal check failed." });
+            }
+
+            // Verify the client owns the tender associated with this proposal
+            Tender.getById(proposal.tender_id, (err, tender) => {
+                if (err) {
+                    console.error('Error fetching tender for proposal status update:', err);
+                    return res.status(500).send({ message: "Error updating proposal status: Tender check failed." });
+                }
+                if (tender.client_id !== client_id) {
+                    return res.status(403).send({ message: "Forbidden: You can only modify proposals for your own tenders." });
+                }
+                if (tender.status === 'awarded' || tender.status === 'closed') {
+                    return res.status(400).send({ message: "Tender is already awarded or closed. Cannot change proposal status." });
+                }
+
+
+                Proposal.updateStatus(proposalId, status, (err, result) => {
+                    if (err) {
+                        console.error('Error updating proposal status:', err);
+                        return res.status(500).send({ message: "Error updating proposal status.", error: err.message });
+                    }
+
+                    // If a proposal is accepted, update the tender status to 'awarded'
+                    if (status === 'accepted') {
+                        Tender.awardTender(proposal.tender_id, (err) => {
+                            if (err) {
+                                console.error('Error awarding tender after proposal acceptance:', err);
+                                // This is a critical error, you might want to rollback proposal status or flag for admin
+                                return res.status(500).send({ message: "Proposal accepted, but failed to update tender status. Please contact support." });
+                            }
+                            // Also close other proposals for this tender as 'rejected' (optional, but good practice)
+                            db.query("UPDATE proposals SET status = 'rejected' WHERE tender_id = ? AND id != ?", [proposal.tender_id, proposalId], (err) => {
+                                if (err) console.warn('Could not automatically reject other proposals:', err);
+                            });
+                            res.status(200).send({ message: "Proposal accepted and tender awarded successfully!" });
+                        });
+                    } else {
+                        res.status(200).send({ message: "Proposal status updated successfully!" });
+                    }
+                });
+            });
+        });
+    },
+
+    // Admin specific: Get all proposals
+    getAllProposalsAdmin: (req, res) => {
+        Proposal.getAll((err, proposals) => {
+            if (err) {
+                console.error('Error fetching all proposals for admin:', err);
+                return res.status(500).send({ message: "Error fetching all proposals.", error: err.message });
+            }
+            res.status(200).send(proposals);
+        });
+    },
+
+    // Admin specific: Delete any proposal
+    deleteAnyProposalAdmin: (req, res) => {
+        const { proposalId } = req.params;
+        Proposal.delete(proposalId, (err, result) => {
+            if (err) {
+                console.error('Error deleting proposal by admin:', err);
+                return res.status(500).send({ message: "Error deleting proposal by admin.", error: err.message });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).send({ message: "Proposal not found for deletion by admin." });
+            }
+            res.status(200).send({ message: "Proposal deleted successfully by admin!" });
+        });
+    }
+};
+
+module.exports = proposalController;
+</file>
+
+<file path="backend/controllers/tenderController.js">
+// backend/controllers/tenderController.js
+const Tender = require('../models/Tender');
+
+const tenderController = {
+    // Client specific: Create a new tender
+    createTender: (req, res) => {
+        const { title, description, budget, deadline } = req.body;
+        // The client_id comes from the authenticated user token
+        const client_id = req.user.id;
+
+        if (!title || !description || !budget || !deadline) {
+            return res.status(400).send({ message: "All tender fields are required." });
+        }
+
+        const tenderData = { client_id, title, description, budget, deadline };
+        Tender.create(tenderData, (err, result) => {
+            if (err) {
+                console.error('Error creating tender:', err);
+                return res.status(500).send({ message: "Error creating tender.", error: err.message });
+            }
+            res.status(201).send({ message: "Tender created successfully!", tenderId: result.insertId });
+        });
+    },
+
+    // Client specific: View tenders created by the logged-in client
+    getClientTenders: (req, res) => {
+        const client_id = req.user.id;
+        Tender.getByClientId(client_id, (err, tenders) => {
+            if (err) {
+                console.error('Error fetching client tenders:', err);
+                return res.status(500).send({ message: "Error fetching your tenders.", error: err.message });
+            }
+            res.status(200).send(tenders);
+        });
+    },
+
+    // Vendor/Admin specific: View all open tenders
+    getAllOpenTenders: (req, res) => {
+        Tender.getAll((err, tenders) => { // You might want to filter for 'open' status here
+            if (err) {
+                console.error('Error fetching all tenders:', err);
+                return res.status(500).send({ message: "Error fetching tenders.", error: err.message });
+            }
+            // Filter for 'open' tenders for vendors if needed, or let the model handle it
+            const openTenders = tenders.filter(tender => tender.status === 'open');
+            res.status(200).send(openTenders);
+        });
+    },
+
+    // Get tender by ID (accessible to client who created it, vendors for details, admins)
+    getTenderById: (req, res) => {
+        const { id } = req.params;
+        Tender.getById(id, (err, tender) => {
+            if (err) {
+                if (err.kind === "not_found") {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+                console.error('Error fetching tender by ID:', err);
+                return res.status(500).send({ message: "Error fetching tender.", error: err.message });
+            }
+
+            // Authorization check (optional, depending on business logic)
+            // A vendor should be able to view any open tender.
+            // A client should only view their own tender details.
+            // An admin can view any.
+            if (req.user.user_type === 'client' && tender.client_id !== req.user.id) {
+                return res.status(403).send({ message: "Forbidden: You can only view your own tenders." });
+            }
+
+            res.status(200).send(tender);
+        });
+    },
+
+    // Client specific: Update a tender (only the client who created it)
+    updateTender: (req, res) => {
+        const { id } = req.params;
+        const client_id = req.user.id;
+        const tenderData = req.body; // title, description, budget, deadline, status
+
+        Tender.getById(id, (err, tender) => {
+            if (err) {
+                if (err.kind === "not_found") {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+                console.error('Error fetching tender for update:', err);
+                return res.status(500).send({ message: "Error finding tender for update." });
+            }
+
+            if (tender.client_id !== client_id) {
+                return res.status(403).send({ message: "Forbidden: You can only update your own tenders." });
+            }
+
+            Tender.update(id, tenderData, (err, result) => {
+                if (err) {
+                    console.error('Error updating tender:', err);
+                    return res.status(500).send({ message: "Error updating tender.", error: err.message });
+                }
+                res.status(200).send({ message: "Tender updated successfully!" });
+            });
+        });
+    },
+
+    // Client specific: Delete a tender (only the client who created it, if no proposals/not awarded)
+    deleteTender: (req, res) => {
+        const { id } = req.params;
+        const client_id = req.user.id;
+
+        Tender.getById(id, (err, tender) => {
+            if (err) {
+                if (err.kind === "not_found") {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+                console.error('Error fetching tender for deletion:', err);
+                return res.status(500).send({ message: "Error finding tender for deletion." });
+            }
+
+            if (tender.client_id !== client_id) {
+                return res.status(403).send({ message: "Forbidden: You can only delete your own tenders." });
+            }
+            // Add more checks here, e.g., only delete if status is 'open' and no proposals submitted.
+
+            Tender.delete(id, (err, result) => {
+                if (err) {
+                    console.error('Error deleting tender:', err);
+                    return res.status(500).send({ message: "Error deleting tender.", error: err.message });
+                }
+                res.status(200).send({ message: "Tender deleted successfully!" });
+            });
+        });
+    },
+
+    // Admin specific: Get all tenders (including closed/awarded)
+    getAllTendersAdmin: (req, res) => {
+        Tender.getAll((err, tenders) => {
+            if (err) {
+                console.error('Error fetching all tenders for admin:', err);
+                return res.status(500).send({ message: "Error fetching all tenders.", error: err.message });
+            }
+            res.status(200).send(tenders);
+        });
+    },
+
+    // Admin specific: Update any tender (e.g., status change)
+    updateAnyTenderAdmin: (req, res) => {
+        const { id } = req.params;
+        const tenderData = req.body;
+        Tender.update(id, tenderData, (err, result) => {
+            if (err) {
+                console.error('Error updating tender by admin:', err);
+                return res.status(500).send({ message: "Error updating tender by admin.", error: err.message });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).send({ message: "Tender not found for update by admin." });
+            }
+            res.status(200).send({ message: "Tender updated successfully by admin!" });
+        });
+    }
+};
+
+module.exports = tenderController;
+</file>
+
+<file path="backend/routes/proposalRoutes.js">
+// backend/routes/proposalRoutes.js
+const express = require('express');
+const proposalController = require('../controllers/proposalController');
+const { protect, authorize } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+// VENDOR specific routes
+router.post('/proposals', protect, authorize('vendor'), proposalController.submitProposal);
+router.get('/proposals/my', protect, authorize('vendor'), proposalController.getVendorProposals);
+
+// CLIENT specific routes
+router.get('/tenders/:tenderId/proposals', protect, authorize('client'), proposalController.getProposalsForTender);
+router.put('/proposals/:proposalId/status', protect, authorize('client'), proposalController.updateProposalStatus); // Accept/Reject proposal
+
+// ADMIN specific routes
+router.get('/admin/proposals', protect, authorize('admin'), proposalController.getAllProposalsAdmin);
+router.delete('/admin/proposals/:proposalId', protect, authorize('admin'), proposalController.deleteAnyProposalAdmin);
+
+
+module.exports = router;
+</file>
+
+<file path="backend/routes/tenderRoutes.js">
+// backend/routes/tenderRoutes.js
+const express = require('express');
+const tenderController = require('../controllers/tenderController');
+const { protect, authorize } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+// CLIENT specific routes
+router.post('/tenders', protect, authorize('client'), tenderController.createTender);
+router.get('/tenders/my', protect, authorize('client'), tenderController.getClientTenders);
+router.put('/tenders/:id', protect, authorize('client'), tenderController.updateTender);
+router.delete('/tenders/:id', protect, authorize('client'), tenderController.deleteTender);
+
+
+// VENDOR specific routes
+router.get('/tenders/open', protect, authorize('vendor'), tenderController.getAllOpenTenders); // Vendors view open tenders
+router.get('/tenders/:id', protect, authorize('client', 'vendor', 'admin'), tenderController.getTenderById); // Get specific tender details
+
+// ADMIN specific routes
+router.get('/admin/tenders', protect, authorize('admin'), tenderController.getAllTendersAdmin); // Admin view all tenders
+router.put('/admin/tenders/:id', protect, authorize('admin'), tenderController.updateAnyTenderAdmin); // Admin can update any tender
+
+module.exports = router;
+</file>
+
 <file path="backend/models/Item.js">
 // backend/models/Item.js
 const db = require('../config/db'); // Import the database connection
@@ -566,11 +955,12 @@ module.exports = Item;
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const itemRoutes = require('./routes/itemRoutes');
-const authRoutes = require('./routes/authRoutes'); // Import auth routes
-const dotenv = require('dotenv'); // To load environment variables
+const authRoutes = require('./routes/authRoutes');
+const tenderRoutes = require('./routes/tenderRoutes'); // New tender routes
+const proposalRoutes = require('./routes/proposalRoutes'); // New proposal routes
+const dotenv = require('dotenv');
 
-dotenv.config(); // Load .env file
+dotenv.config();
 
 const app = express();
 const port = 7000;
@@ -580,12 +970,13 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // API Routes
-app.use('/api', itemRoutes);
-app.use('/api/auth', authRoutes); // All authentication routes under /api/auth
+app.use('/api/auth', authRoutes); // Shared authentication routes
+app.use('/api', tenderRoutes);    // Tender related routes
+app.use('/api', proposalRoutes);  // Proposal related routes
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
-    res.send('Server is running and ready for API requests!');
+    res.send('BizTech Group Platform Backend is running!');
 });
 
 // Start the server
