@@ -13,8 +13,8 @@ const authController = {
         if (!name || !email || !password || !user_type) {
             return res.status(400).send({ message: "All required fields must be provided." });
         }
-        if (!['client', 'bidder', 'admin'].includes(user_type)) {
-            return res.status(400).send({ message: "Invalid user type." });
+        if (!['client', 'vendor', 'admin'].includes(user_type)) { // Corrected 'bidder' to 'vendor'
+            return res.status(400).send({ message: "Invalid user type. Must be 'client', 'vendor', or 'admin'." });
         }
 
         User.findByEmail(email, (err, users) => {
@@ -69,7 +69,6 @@ const authController = {
         });
     },
 
-    // --- Forgot Password Implementation ---
     forgotPassword: (req, res) => {
         const { email } = req.body;
         if (!email) {
@@ -79,28 +78,23 @@ const authController = {
         User.findByEmail(email, async (err, users) => {
             if (err) {
                 console.error('Error during forgotPassword (findByEmail):', err);
-                // For security, always send a generic success message even if email not found
                 return res.status(200).send({ message: "If an account with that email exists, a password reset link has been sent." });
             }
             if (users.length === 0) {
-                // Email not found, but send generic success message for security reasons
                 return res.status(200).send({ message: "If an account with that email exists, a password reset link has been sent." });
             }
 
             const user = users[0];
 
-            // Generate a random token
             const resetToken = crypto.randomBytes(32).toString('hex');
-            // Set token expiry to 1 hour from now
             const resetExpire = new Date(Date.now() + 3600000); // 1 hour
 
-            User.saveResetToken(user.email, resetToken, resetExpire, async (err) => { // Removed 'result'
+            User.saveResetToken(user.email, resetToken, resetExpire, async (err) => {
                 if (err) {
                     console.error('Error saving reset token:', err);
                     return res.status(500).send({ message: "Error initiating password reset." });
                 }
 
-                // Send the email with the reset link
                 const emailSent = await sendPasswordResetEmail(user.email, resetToken);
 
                 if (emailSent) {
@@ -112,12 +106,11 @@ const authController = {
         });
     },
 
-    // --- Reset Password Implementation ---
     resetPassword: (req, res) => {
         const { token } = req.params;
         const { newPassword } = req.body;
 
-        if (!newPassword || newPassword.length < 6) { // Basic password strength validation
+        if (!newPassword || newPassword.length < 6) {
             return res.status(400).send({ message: "New password must be at least 6 characters long." });
         }
 
@@ -130,8 +123,7 @@ const authController = {
                 return res.status(500).send({ message: "Server error during password reset." });
             }
 
-            // User found and token is valid and not expired
-            User.updatePassword(user.id, newPassword, (err) => { // Removed 'result'
+            User.updatePassword(user.id, newPassword, (err) => {
                 if (err) {
                     console.error('Error updating password:', err);
                     return res.status(500).send({ message: "Error resetting password." });

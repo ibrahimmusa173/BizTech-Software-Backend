@@ -4,23 +4,18 @@ const dotenv = require('dotenv');
 dotenv.config(); // Load .env file for email credentials
 
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.mailtrap.io', // e.g., 'smtp.gmail.com' or 'smtp.sendgrid.net'
-    port: process.env.EMAIL_PORT || 2525,       // e.g., 465 for SSL, 587 for TLS
+    host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
+    port: process.env.EMAIL_PORT || 2525,
     secure: false, // true for 465, false for other ports
     auth: {
-        user: process.env.EMAIL_USER || 'your_mailtrap_username', // Your email address from .env
-        pass: process.env.EMAIL_PASS || 'your_mailtrap_password'  // Your email password from .env
+        user: process.env.EMAIL_USER || 'your_mailtrap_username',
+        pass: process.env.EMAIL_PASS || 'your_mailtrap_password'
     },
-    // Optional: for local development with self-signed certs or specific networks
-    // tls: {
-    //     rejectUnauthorized: false
-    // }
 });
 
 const sendPasswordResetEmail = async (toEmail, token) => {
     // Make sure your frontend URL is correct here.
-    // In a real app, you'd use an environment variable for `FRONTEND_URL`.
-    const resetUrl = `http://localhost:5173/reset-password/${token}`; // Adjust port if your frontend uses a different one
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`; // Use environment variable
 
     const mailOptions = {
         from: process.env.EMAIL_FROM || 'no-reply@yourdomain.com',

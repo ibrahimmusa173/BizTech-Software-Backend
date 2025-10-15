@@ -46,17 +46,222 @@ backend/.env
 backend/app.js
 backend/config/db.js
 backend/controllers/authController.js
-backend/controllers/itemController.js
-backend/models/Item.js
+backend/controllers/proposalController.js
+backend/controllers/tenderController.js
+backend/controllers/userController.js
+backend/middleware/authMiddleware.js
+backend/models/Proposal.js
+backend/models/Tender.js
 backend/models/User.js
+backend/repomix-output.xml
 backend/routes/authRoutes.js
-backend/routes/itemRoutes.js
+backend/routes/proposalRoutes.js
+backend/routes/tenderRoutes.js
+backend/routes/userRoutes.js
 backend/utils/emailService.js
 package.json
+Spare/contex
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="backend/controllers/userController.js">
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+
+const userController = {
+    // Get currently authenticated user's profile
+    getProfile: (req, res) => {
+        User.getById(req.user.id, (err, users) => {
+            if (err) {
+                console.error('Error getting user profile:', err);
+                return res.status(500).send({ message: "Error fetching user profile." });
+            }
+            if (users.length === 0) {
+                return res.status(404).send({ message: "User not found." });
+            }
+            const user = users[0];
+            // Don't send password hash
+            delete user.password;
+            delete user.resetPasswordToken;
+            delete user.resetPasswordExpire;
+            res.status(200).send(user);
+        });
+    },
+
+    // Update currently authenticated user's profile
+    updateProfile: (req, res) => {
+        const userId = req.user.id;
+        const { name, company_name, email, currentPassword, newPassword } = req.body;
+
+        // Fetch user to verify current password if new password is provided
+        User.getById(userId, (err, users) => {
+            if (err) {
+                console.error('Error fetching user for profile update:', err);
+                return res.status(500).send({ message: "Server error during profile update." });
+            }
+            if (users.length === 0) {
+                return res.status(404).send({ message: "User not found." });
+            }
+            const user = users[0];
+
+            let updateData = { name, company_name, email };
+            let passwordPromise = Promise.resolve(); // No password change by default
+
+            // If a new password is provided, verify current password
+            if (newPassword) {
+                if (!currentPassword) {
+                    return res.status(400).send({ message: "Current password is required to change password." });
+                }
+                passwordPromise = new Promise((resolve, reject) => {
+                    bcrypt.compare(currentPassword, user.password, (err, isMatch) => {
+                        if (err) return reject(new Error("Server error verifying password."));
+                        if (!isMatch) return reject(new Error("Incorrect current password."));
+
+                        bcrypt.hash(newPassword, 10, (err, hashedPassword) => {
+                            if (err) return reject(new Error("Server error hashing new password."));
+                            updateData.password = hashedPassword;
+                            resolve();
+                        });
+                    });
+                });
+            }
+
+            passwordPromise
+                .then(() => {
+                    User.update(userId, updateData, (err, result) => {
+                        if (err) {
+                            console.error('Error updating user profile:', err);
+                            return res.status(500).send({ message: "Error updating profile." });
+                        }
+                        if (result.affectedRows === 0) {
+                            return res.status(404).send({ message: "User not found for update." });
+                        }
+                        res.status(200).send({ message: "Profile updated successfully!" });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error in profile update promise chain:', error.message);
+                    res.status(400).send({ message: error.message });
+                });
+        });
+    },
+
+    // --- Admin functionalities ---
+
+    // Admin: Get all users
+    getAllUsers: (req, res) => {
+        User.getAll((err, users) => {
+            if (err) {
+                console.error('Error getting all users (admin):', err);
+                return res.status(500).send({ message: "Error fetching users." });
+            }
+            // Remove sensitive password info before sending
+            const sanitizedUsers = users.map(user => {
+                delete user.password;
+                delete user.resetPasswordToken;
+                delete user.resetPasswordExpire;
+                return user;
+            });
+            res.status(200).send(sanitizedUsers);
+        });
+    },
+
+    // Admin: Get a user by ID
+    getUserById: (req, res) => {
+        const { id } = req.params;
+        User.getById(id, (err, users) => {
+            if (err) {
+                console.error('Error getting user by ID (admin):', err);
+                return res.status(500).send({ message: "Error fetching user." });
+            }
+            if (users.length === 0) {
+                return res.status(404).send({ message: "User not found." });
+            }
+            const user = users[0];
+            delete user.password;
+            delete user.resetPasswordToken;
+            delete user.resetPasswordExpire;
+            res.status(200).send(user);
+        });
+    },
+
+    // Admin: Update user account status (e.g., active/deactive, potentially user_type)
+    updateUserStatus: (req, res) => {
+        const { id } = req.params;
+        const { user_type, status } = req.body; // 'status' might map to an 'is_active' column or just change user_type
+
+        // For simplicity, let's allow admin to change user_type and potentially a conceptual 'status'
+        // You'd likely have an 'is_active' boolean column in your users table for real deactivation.
+        let updateData = {};
+        if (user_type && ['client', 'vendor', 'admin'].includes(user_type)) {
+            updateData.user_type = user_type;
+        }
+        // If you had an 'is_active' column:
+        // if (typeof status === 'boolean') {
+        //     updateData.is_active = status;
+        // }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).send({ message: "No valid fields provided for update (user_type)." });
+        }
+
+        User.update(id, updateData, (err, result) => {
+            if (err) {
+                console.error('Error updating user status (admin):', err);
+                return res.status(500).send({ message: "Error updating user account." });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).send({ message: "User not found for update." });
+            }
+            res.status(200).send({ message: "User account updated successfully!" });
+        });
+    },
+
+    // Admin: Delete a user account
+    deleteUser: (req, res) => {
+        const { id } = req.params;
+        User.delete(id, (err, result) => {
+            if (err) {
+                console.error('Error deleting user (admin):', err);
+                return res.status(500).send({ message: "Error deleting user." });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).send({ message: "User not found for deletion." });
+            }
+            res.status(200).send({ message: "User deleted successfully!" });
+        });
+    }
+};
+
+module.exports = userController;
+</file>
+
+<file path="backend/routes/userRoutes.js">
+const express = require('express');
+const userController = require('../controllers/userController');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+// Client/Vendor/Admin: Get authenticated user's profile
+router.get("/profile", authenticateToken, userController.getProfile);
+// Client/Vendor/Admin: Update authenticated user's profile
+router.put("/profile", authenticateToken, userController.updateProfile);
+
+// Admin Only: Get all users
+router.get("/", authenticateToken, authorizeRoles(['admin']), userController.getAllUsers);
+// Admin Only: Get user by ID
+router.get("/:id", authenticateToken, authorizeRoles(['admin']), userController.getUserById);
+// Admin Only: Update user (status, user_type)
+router.put("/:id", authenticateToken, authorizeRoles(['admin']), userController.updateUserStatus);
+// Admin Only: Delete user
+router.delete("/:id", authenticateToken, authorizeRoles(['admin']), userController.deleteUser);
+
+
+module.exports = router;
+</file>
 
 <file path=".gitattributes">
 # Auto detect text files and perform LF normalization
@@ -90,30 +295,6 @@ dist-ssr
 *.sw?
 </file>
 
-<file path="backend/.env">
-# For JWT
-JWT_SECRET=your_extremely_strong_and_long_jwt_secret_key_that_is_unique_to_your_application_and_never_hardcoded_in_production
-
-# --- CHOOSE ONE OF THE FOLLOWING BLOCKS ---
-
-# Option 1: For Mailtrap (recommended for development)
-EMAIL_HOST=smtp.mailtrap.io
-EMAIL_PORT=2525
-EMAIL_USER=your_mailtrap_username_here # <-- REPLACE THIS
-EMAIL_PASS=your_mailtrap_password_here # <-- REPLACE THIS
-EMAIL_FROM=no-reply@yourdomain.com
-
-# Option 2: For Gmail (requires "App passwords", less recommended for production)
-# EMAIL_HOST=smtp.gmail.com
-# EMAIL_PORT=587
-# EMAIL_USER=your_gmail_address@gmail.com # <-- REPLACE THIS
-# EMAIL_PASS=your_gmail_app_password_here # <-- REPLACE THIS with the 16-character app password
-# EMAIL_FROM=your_gmail_address@gmail.com
-
-# Your Frontend URL (important for password reset links)
-# FRONTEND_URL=http://localhost:5173
-</file>
-
 <file path="backend/config/db.js">
 const mysql = require('mysql');
 
@@ -137,6 +318,382 @@ module.exports = sqlconnect;
 </file>
 
 <file path="backend/controllers/authController.js">
+// backend/controllers/authController.js
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken'); // For authentication tokens
+const crypto = require('crypto');     // For generating tokens
+const { sendPasswordResetEmail } = require('../utils/emailService'); // Import email service
+
+const authController = {
+    register: (req, res) => {
+        const { name, company_name, email, password, user_type } = req.body;
+
+        // Basic validation
+        if (!name || !email || !password || !user_type) {
+            return res.status(400).send({ message: "All required fields must be provided." });
+        }
+        if (!['client', 'vendor', 'admin'].includes(user_type)) { // Corrected 'bidder' to 'vendor'
+            return res.status(400).send({ message: "Invalid user type. Must be 'client', 'vendor', or 'admin'." });
+        }
+
+        User.findByEmail(email, (err, users) => {
+            if (err) {
+                console.error('Error during registration (findByEmail):', err);
+                return res.status(500).send({ message: "Server error during registration." });
+            }
+            if (users.length > 0) {
+                return res.status(409).send({ message: "Email already registered." });
+            }
+
+            User.create({ name, company_name, email, password, user_type }, (err, result) => {
+                if (err) {
+                    console.error('Error during registration (create user):', err);
+                    return res.status(500).send({ message: "Error registering user." });
+                }
+                res.status(201).send({ message: "User registered successfully!", userId: result.insertId });
+            });
+        });
+    },
+
+    login: (req, res) => {
+        const { email, password } = req.body;
+
+        User.findByEmail(email, (err, users) => {
+            if (err) {
+                console.error('Error during login (findByEmail):', err);
+                return res.status(500).send({ message: "Server error during login." });
+            }
+            if (users.length === 0) {
+                return res.status(401).send({ message: "Invalid credentials." });
+            }
+
+            const user = users[0];
+            bcrypt.compare(password, user.password, (err, isMatch) => {
+                if (err) {
+                    console.error('Error during login (bcrypt.compare):', err);
+                    return res.status(500).send({ message: "Server error during login." });
+                }
+                if (!isMatch) {
+                    return res.status(401).send({ message: "Invalid credentials." });
+                }
+
+                const token = jwt.sign(
+                    { id: user.id, email: user.email, user_type: user.user_type },
+                    process.env.JWT_SECRET || 'supersecretjwtkey',
+                    { expiresIn: '1h' }
+                );
+
+                res.status(200).send({ message: "Logged in successfully!", token, user: { id: user.id, name: user.name, email: user.email, user_type: user.user_type } });
+            });
+        });
+    },
+
+    forgotPassword: (req, res) => {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).send({ message: "Email is required." });
+        }
+
+        User.findByEmail(email, async (err, users) => {
+            if (err) {
+                console.error('Error during forgotPassword (findByEmail):', err);
+                return res.status(200).send({ message: "If an account with that email exists, a password reset link has been sent." });
+            }
+            if (users.length === 0) {
+                return res.status(200).send({ message: "If an account with that email exists, a password reset link has been sent." });
+            }
+
+            const user = users[0];
+
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            const resetExpire = new Date(Date.now() + 3600000); // 1 hour
+
+            User.saveResetToken(user.email, resetToken, resetExpire, async (err) => {
+                if (err) {
+                    console.error('Error saving reset token:', err);
+                    return res.status(500).send({ message: "Error initiating password reset." });
+                }
+
+                const emailSent = await sendPasswordResetEmail(user.email, resetToken);
+
+                if (emailSent) {
+                    res.status(200).send({ message: "Password reset link sent to your email!" });
+                } else {
+                    res.status(500).send({ message: "Failed to send password reset email. Please try again later." });
+                }
+            });
+        });
+    },
+
+    resetPassword: (req, res) => {
+        const { token } = req.params;
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).send({ message: "New password must be at least 6 characters long." });
+        }
+
+        User.findByResetToken(token, (err, user) => {
+            if (err) {
+                if (err.kind === "not_found") {
+                    return res.status(400).send({ message: "Password reset token is invalid or has expired." });
+                }
+                console.error('Error finding user by reset token:', err);
+                return res.status(500).send({ message: "Server error during password reset." });
+            }
+
+            User.updatePassword(user.id, newPassword, (err) => {
+                if (err) {
+                    console.error('Error updating password:', err);
+                    return res.status(500).send({ message: "Error resetting password." });
+                }
+                res.status(200).send({ message: "Password has been successfully reset!" });
+            });
+        });
+    },
+};
+
+module.exports = authController;
+</file>
+
+<file path="backend/models/User.js">
+// backend/models/User.js
+const db = require('../config/db'); // Import the database connection
+const bcrypt = require('bcryptjs'); // For password hashing
+
+const User = {
+    // Finds a user by email
+    findByEmail: (email, callback) => {
+        db.query("SELECT * FROM users WHERE email = ?", [email], callback);
+    },
+
+    // Finds a user by ID
+    getById: (id, callback) => {
+        db.query("SELECT * FROM users WHERE id = ?", [id], callback);
+    },
+
+    // Creates a new user with hashed password
+    create: (userData, callback) => {
+        const { name, company_name, email, password, user_type } = userData;
+        // Hash password before storing
+        bcrypt.hash(password, 10, (err, hashedPassword) => {
+            if (err) return callback(err);
+
+            const sql = "INSERT INTO users (name, company_name, email, password, user_type) VALUES (?, ?, ?, ?, ?)";
+            db.query(sql, [name, company_name, email, hashedPassword, user_type], callback);
+        });
+    },
+
+    // Dummy method for getting all users (can be expanded for admin view)
+    getAll: (callback) => {
+        db.query("SELECT id, name, company_name, email, user_type, created_at, updated_at FROM users", callback);
+    },
+
+    // General update method for user profile and admin management
+    update: (userId, userData, callback) => {
+        let fields = [];
+        let values = [];
+
+        // Handle password separately to hash it
+        if (userData.password) {
+            bcrypt.hash(userData.password, 10, (err, hashedPassword) => {
+                if (err) return callback(err);
+                fields.push("password = ?");
+                values.push(hashedPassword);
+                delete userData.password; // Remove plain password from userData
+                User._buildUpdateQuery(userId, userData, fields, values, callback);
+            });
+        } else {
+            User._buildUpdateQuery(userId, userData, fields, values, callback);
+        }
+    },
+
+    _buildUpdateQuery: (userId, userData, fields, values, callback) => {
+        for (const key in userData) {
+            if (userData.hasOwnProperty(key) && userData[key] !== undefined) {
+                fields.push(`${key} = ?`);
+                values.push(userData[key]);
+            }
+        }
+
+        if (fields.length === 0) {
+            return callback(null, { affectedRows: 0 }); // No fields to update
+        }
+
+        const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+        values.push(userId);
+
+        db.query(sql, values, callback);
+    },
+
+    delete: (id, callback) => {
+        const sql = "DELETE FROM users WHERE id = ?";
+        db.query(sql, [id], callback);
+    },
+
+    // --- Methods for password reset (already existing, kept as is) ---
+
+    // Save reset token and expiry to the database for a user
+    saveResetToken: (email, token, expire, callback) => {
+        db.query(
+            "UPDATE users SET resetPasswordToken = ?, resetPasswordExpire = ? WHERE email = ?",
+            [token, expire, email],
+            (err, result) => {
+                if (err) { callback(err); return; }
+                if (result.affectedRows === 0) { callback({ kind: "not_found" }); return; }
+                callback(null, result);
+            }
+        );
+    },
+
+    // Find a user by a valid (non-expired) reset token
+    findByResetToken: (token, callback) => {
+        // Ensure token is not null and expiry is in the future
+        db.query(
+            "SELECT * FROM users WHERE resetPasswordToken = ? AND resetPasswordExpire > NOW()",
+            [token],
+            (err, rows) => {
+                if (err) { callback(err); return; }
+                if (rows.length) { callback(null, rows[0]); return; }
+                callback({ kind: "not_found" });
+            }
+        );
+    },
+
+    // Update a user's password and clear the reset token
+    updatePassword: (userId, newPassword, callback) => {
+        bcrypt.hash(newPassword, 10, (err, hashedPassword) => {
+            if (err) return callback(err);
+
+            db.query(
+                "UPDATE users SET password = ?, resetPasswordToken = NULL, resetPasswordExpire = NULL WHERE id = ?",
+                [hashedPassword, userId],
+                (err, result) => {
+                    if (err) { callback(err); return; }
+                    if (result.affectedRows === 0) { callback({ kind: "not_found" }); return; }
+                    callback(null, result);
+                }
+            );
+        });
+    },
+};
+
+module.exports = User;
+</file>
+
+<file path="backend/repomix-output.xml">
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+app.js
+config/db.js
+controllers/authController.js
+controllers/itemController.js
+models/Item.js
+models/User.js
+routes/authRoutes.js
+routes/itemRoutes.js
+utils/emailService.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="app.js">
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const itemRoutes = require('./routes/itemRoutes');
+const authRoutes = require('./routes/authRoutes'); // Import auth routes
+const dotenv = require('dotenv'); // To load environment variables
+
+dotenv.config(); // Load .env file
+
+const app = express();
+const port = 7000;
+
+// Middleware
+app.use(bodyParser.json());
+app.use(cors());
+
+// API Routes
+app.use('/api', itemRoutes);
+app.use('/api/auth', authRoutes); // All authentication routes under /api/auth
+
+// Simple root route (optional, for testing if server is running)
+app.get('/', (req, res) => {
+    res.send('Server is running and ready for API requests!');
+});
+
+// Start the server
+app.listen(port, () => console.log(`Server is running on port ${port}`));
+
+module.exports = app;
+</file>
+
+<file path="config/db.js">
+const mysql = require('mysql');
+
+const sqlconnect = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'practice_db',
+    multipleStatements: true
+});
+
+sqlconnect.connect((err) => {
+    if (!err) {
+        console.log('DB connection succeeded');
+    } else {
+        console.error('DB connection failed:', err.message);
+    }
+});
+
+module.exports = sqlconnect;
+</file>
+
+<file path="controllers/authController.js">
 // backend/controllers/authController.js
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
@@ -284,7 +841,7 @@ const authController = {
 module.exports = authController;
 </file>
 
-<file path="backend/controllers/itemController.js">
+<file path="controllers/itemController.js">
 const Item = require('../models/Item'); // Import the Item model
 
 const itemController = {
@@ -364,7 +921,44 @@ const itemController = {
 module.exports = itemController;
 </file>
 
-<file path="backend/models/User.js">
+<file path="models/Item.js">
+// backend/models/Item.js
+const db = require('../config/db'); // Import the database connection
+
+const Item = {
+    getAll: (callback) => {
+        db.query("SELECT * FROM items", callback);
+    },
+
+    getById: (id, callback) => {
+        db.query("SELECT * FROM items WHERE id = ?", [id], (err, rows) => {
+            if (err) return callback(err);
+            callback(null, rows);
+        });
+    },
+
+    create: (itemData, callback) => {
+        const { name, description, price } = itemData;
+        const sql = "INSERT INTO items (name, description, price) VALUES (?, ?, ?)";
+        db.query(sql, [name, description, price], callback);
+    },
+
+    update: (id, itemData, callback) => {
+        const { name, description, price } = itemData;
+        const sql = "UPDATE items SET name = ?, description = ?, price = ? WHERE id = ?";
+        db.query(sql, [name, description, price, id], callback);
+    },
+
+    delete: (id, callback) => {
+        const sql = "DELETE FROM items WHERE id = ?";
+        db.query(sql, [id], callback);
+    }
+};
+
+module.exports = Item;
+</file>
+
+<file path="models/User.js">
 // backend/models/User.js
 const db = require('../config/db'); // Import the database connection
 const bcrypt = require('bcryptjs'); // For password hashing
@@ -444,7 +1038,7 @@ const User = {
 module.exports = User;
 </file>
 
-<file path="backend/routes/authRoutes.js">
+<file path="routes/authRoutes.js">
 // backend/routes/authRoutes.js
 const express = require('express');
 const authController = require('../controllers/authController');
@@ -459,7 +1053,7 @@ router.post("/reset-password/:token", authController.resetPassword); // New rout
 module.exports = router;
 </file>
 
-<file path="backend/routes/itemRoutes.js">
+<file path="routes/itemRoutes.js">
 const express = require('express');
 const itemController = require('../controllers/itemController'); // Import the item controller
 
@@ -475,7 +1069,7 @@ router.delete("/items/:id", itemController.deleteItem);   // DELETE an item
 module.exports = router;
 </file>
 
-<file path="backend/utils/emailService.js">
+<file path="utils/emailService.js">
 // backend/utils/emailService.js
 const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
@@ -525,67 +1119,961 @@ const sendPasswordResetEmail = async (toEmail, token) => {
 module.exports = { sendPasswordResetEmail };
 </file>
 
-<file path="backend/models/Item.js">
-// backend/models/Item.js
-const db = require('../config/db'); // Import the database connection
+</files>
+</file>
 
-const Item = {
-    getAll: (callback) => {
-        db.query("SELECT * FROM items", callback);
+<file path="backend/routes/authRoutes.js">
+// backend/routes/authRoutes.js
+const express = require('express');
+const authController = require('../controllers/authController');
+
+const router = express.Router();
+
+router.post("/register", authController.register);
+router.post("/login", authController.login);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/reset-password/:token", authController.resetPassword);
+
+module.exports = router;
+</file>
+
+<file path="backend/utils/emailService.js">
+// backend/utils/emailService.js
+const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
+dotenv.config(); // Load .env file for email credentials
+
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
+    port: process.env.EMAIL_PORT || 2525,
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.EMAIL_USER || 'your_mailtrap_username',
+        pass: process.env.EMAIL_PASS || 'your_mailtrap_password'
+    },
+});
+
+const sendPasswordResetEmail = async (toEmail, token) => {
+    // Make sure your frontend URL is correct here.
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`; // Use environment variable
+
+    const mailOptions = {
+        from: process.env.EMAIL_FROM || 'no-reply@yourdomain.com',
+        to: toEmail,
+        subject: 'Password Reset Request',
+        html: `
+            <p>You requested a password reset. Please click the link below to reset your password:</p>
+            <a href="${resetUrl}">Reset Password</a>
+            <p>This link is valid for 1 hour.</p>
+            <p>If you did not request this, please ignore this email.</p>
+        `,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Password reset email sent to ${toEmail}`);
+        return true;
+    } catch (error) {
+        console.error(`Error sending password reset email to ${toEmail}:`, error);
+        return false;
+    }
+};
+
+module.exports = { sendPasswordResetEmail };
+</file>
+
+<file path="backend/.env">
+PORT=7000
+JWT_SECRET=supersecretjwtkey # Change this to a strong, random key in production
+EMAIL_HOST=smtp.mailtrap.io
+EMAIL_PORT=2525
+EMAIL_USER=your_mailtrap_username
+EMAIL_PASS=your_mailtrap_password
+EMAIL_FROM=no-reply@yourdomain.com
+FRONTEND_URL=http://localhost:5173 # Ensure this matches your frontend's URL
+</file>
+
+<file path="backend/middleware/authMiddleware.js">
+const jwt = require('jsonwebtoken');
+const db = require('../config/db'); // Using db to fetch user for role check
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).send({ message: "Access Denied: No token provided." });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
+        if (err) {
+            console.error("JWT Verification Error:", err.message);
+            return res.status(403).send({ message: "Access Denied: Invalid token." });
+        }
+        req.user = user; // Attach user payload (id, email, user_type) to the request
+        next();
+    });
+};
+
+const authorizeRoles = (roles) => {
+    return (req, res, next) => {
+        if (!req.user || !req.user.user_type) {
+            return res.status(403).send({ message: "Access Denied: User role not found." });
+        }
+        if (!roles.includes(req.user.user_type)) {
+            return res.status(403).send({ message: `Access Denied: You must be one of the following roles: ${roles.join(', ')}.` });
+        }
+        next();
+    };
+};
+
+module.exports = { authenticateToken, authorizeRoles };
+</file>
+
+<file path="backend/models/Proposal.js">
+const db = require('../config/db');
+
+const Proposal = {
+    create: (proposalData, callback) => {
+        const { tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status } = proposalData;
+        const sql = `INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        db.query(sql, [tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status], callback);
     },
 
     getById: (id, callback) => {
-        db.query("SELECT * FROM items WHERE id = ?", [id], (err, rows) => {
-            if (err) return callback(err);
-            callback(null, rows);
-        });
+        db.query("SELECT * FROM proposals WHERE id = ?", [id], callback);
     },
 
-    create: (itemData, callback) => {
-        const { name, description, price } = itemData;
-        const sql = "INSERT INTO items (name, description, price) VALUES (?, ?, ?)";
-        db.query(sql, [name, description, price], callback);
+    // Get all proposals for a specific tender (for client/admin to view)
+    findByTenderId: (tenderId, callback) => {
+        const sql = `SELECT p.*, u.name as vendor_name, u.company_name as vendor_company, u.email as vendor_email
+                     FROM proposals p
+                     JOIN users u ON p.vendor_id = u.id
+                     WHERE p.tender_id = ?`;
+        db.query(sql, [tenderId], callback);
     },
 
-    update: (id, itemData, callback) => {
-        const { name, description, price } = itemData;
-        const sql = "UPDATE items SET name = ?, description = ?, price = ? WHERE id = ?";
-        db.query(sql, [name, description, price, id], callback);
+    // Get all proposals submitted by a specific vendor
+    findByVendorId: (vendorId, callback) => {
+        const sql = `SELECT p.*, t.title as tender_title, t.description as tender_description, t.client_id
+                     FROM proposals p
+                     JOIN tenders t ON p.tender_id = t.id
+                     WHERE p.vendor_id = ?`;
+        db.query(sql, [vendorId], callback);
+    },
+
+    update: (id, proposalData, callback) => {
+        const fields = [];
+        const values = [];
+
+        for (const key in proposalData) {
+            if (proposalData.hasOwnProperty(key) && proposalData[key] !== undefined) {
+                fields.push(`${key} = ?`);
+                values.push(proposalData[key]);
+            }
+        }
+
+        if (fields.length === 0) {
+            return callback(null, { affectedRows: 0 }); // No fields to update
+        }
+
+        const sql = `UPDATE proposals SET ${fields.join(', ')} WHERE id = ?`;
+        values.push(id);
+        db.query(sql, values, callback);
     },
 
     delete: (id, callback) => {
-        const sql = "DELETE FROM items WHERE id = ?";
+        const sql = "DELETE FROM proposals WHERE id = ?";
         db.query(sql, [id], callback);
     }
 };
 
-module.exports = Item;
+module.exports = Proposal;
+</file>
+
+<file path="backend/models/Tender.js">
+const db = require('../config/db');
+
+const Tender = {
+    create: (tenderData, callback) => {
+        const { client_id, title, description, category, budget_range, deadline, location, contact_info, attachments, status } = tenderData;
+        const sql = `INSERT INTO tenders (client_id, title, description, category, budget_range, deadline, location, contact_info, attachments, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        db.query(sql, [client_id, title, description, category, budget_range, deadline, location, contact_info, attachments, status], callback);
+    },
+
+    // Get all tenders (for admin or general search)
+    getAll: (callback) => {
+        db.query("SELECT * FROM tenders", callback);
+    },
+
+    // Get a single tender by ID
+    getById: (id, callback) => {
+        db.query("SELECT * FROM tenders WHERE id = ?", [id], callback);
+    },
+
+    // Get tenders by a specific client
+    findByClientId: (clientId, callback) => {
+        db.query("SELECT * FROM tenders WHERE client_id = ?", [clientId], callback);
+    },
+
+    update: (id, tenderData, callback) => {
+        const fields = [];
+        const values = [];
+
+        for (const key in tenderData) {
+            if (tenderData.hasOwnProperty(key) && tenderData[key] !== undefined) {
+                fields.push(`${key} = ?`);
+                values.push(tenderData[key]);
+            }
+        }
+
+        if (fields.length === 0) {
+            return callback(null, { affectedRows: 0 }); // No fields to update
+        }
+
+        const sql = `UPDATE tenders SET ${fields.join(', ')} WHERE id = ?`;
+        values.push(id);
+        db.query(sql, values, callback);
+    },
+
+    delete: (id, callback) => {
+        const sql = "DELETE FROM tenders WHERE id = ?";
+        db.query(sql, [id], callback);
+    },
+
+    // Search tenders with filters
+    search: (filters, callback) => {
+        let sql = `SELECT t.*, u.name as client_name, u.company_name as client_company
+                   FROM tenders t
+                   JOIN users u ON t.client_id = u.id
+                   WHERE 1=1`;
+        const values = [];
+
+        if (filters.keywords) {
+            const searchKw = `%${filters.keywords}%`;
+            sql += ` AND (t.title LIKE ? OR t.description LIKE ? OR t.category LIKE ?)`;
+            values.push(searchKw, searchKw, searchKw);
+        }
+        if (filters.category) {
+            sql += ` AND t.category = ?`;
+            values.push(filters.category);
+        }
+        if (filters.location) {
+            sql += ` AND t.location LIKE ?`;
+            values.push(`%${filters.location}%`);
+        }
+        if (filters.min_budget) {
+            // Assuming budget_range is flexible string, might need parsing or better schema
+            // For now, a simple LIKE search or client-side filtering might be necessary
+            // Or a more complex SQL query if budget_range had specific numeric format
+            sql += ` AND (t.budget_range LIKE ? OR t.budget_range = 'Negotiable')`; // Very basic, improve as needed
+            values.push(`%${filters.min_budget}%`);
+        }
+        if (filters.max_budget) {
+            sql += ` AND (t.budget_range LIKE ? OR t.budget_range = 'Negotiable')`; // Very basic, improve as needed
+            values.push(`%${filters.max_budget}%`);
+        }
+        if (filters.status) {
+            sql += ` AND t.status = ?`;
+            values.push(filters.status);
+        } else if (filters.status === null && !filters.keywords && !filters.category && !filters.location && !filters.min_budget && !filters.max_budget) {
+            // If admin searches without status, show all except drafts by default, or explicitly all
+            // For general users, default to 'active' is handled in controller
+            // If admin explicitly wants all, the status should be 'all' or similar
+            // For now, if null for admin, it means no status filter applied
+        }
+
+
+        // Ordering
+        sql += ` ORDER BY t.${filters.sort_by || 'created_at'} ${filters.order_by === 'ASC' ? 'ASC' : 'DESC'}`;
+
+        db.query(sql, values, callback);
+    }
+};
+
+module.exports = Tender;
+</file>
+
+<file path="Spare/contex">
+this is only backend till api's
+</file>
+
+<file path="backend/controllers/proposalController.js">
+const Proposal = require('../models/Proposal');
+const Tender = require('../models/Tender'); // To check tender status
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+
+// Configure Multer for file uploads for proposals
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'uploads/proposals';
+        fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+const proposalController = {
+    // Vendor: Submit a new proposal for an active tender
+    submitProposal: [
+        upload.array('attachments', 3), // Allow up to 3 attachments
+        (req, res) => {
+            const vendor_id = req.user.id;
+            const tender_id = req.body.tender_id; // Must be provided in body
+            const { cover_letter, proposed_solution, pricing } = req.body;
+
+            if (!tender_id || !cover_letter || !proposed_solution || !pricing) {
+                return res.status(400).send({ message: "Tender ID, Cover Letter, Proposed Solution, and Pricing are required." });
+            }
+
+            // First, check if the tender exists and is active
+            Tender.getById(tender_id, (err, tenders) => {
+                if (err) {
+                    console.error('Error checking tender status:', err);
+                    return res.status(500).send({ message: "Error submitting proposal." });
+                }
+                if (tenders.length === 0) {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+                const tender = tenders[0];
+                if (tender.status !== 'active' && tender.status !== 'approved') { // Can submit to active or approved tenders
+                    return res.status(400).send({ message: "Proposals can only be submitted for active tenders." });
+                }
+
+                const attachments = req.files ? req.files.map(file => `/uploads/proposals/${file.filename}`) : [];
+
+                const proposalData = {
+                    tender_id,
+                    vendor_id,
+                    cover_letter,
+                    proposed_solution,
+                    pricing,
+                    attachments: JSON.stringify(attachments),
+                    status: 'pending' // Default status
+                };
+
+                Proposal.create(proposalData, (err, result) => {
+                    if (err) {
+                        console.error('Error submitting proposal:', err);
+                        return res.status(500).send({ message: "Error submitting proposal." });
+                    }
+                    res.status(201).send({ message: "Proposal submitted successfully!", proposalId: result.insertId });
+                });
+            });
+        }
+    ],
+
+    // Client/Admin: Get all proposals for a specific tender
+    getProposalsForTender: (req, res) => {
+        const tender_id = req.params.tenderId; // From URL parameter
+        const currentUserId = req.user.id;
+        const currentUserType = req.user.user_type;
+
+        // First, check if the user is authorized to view proposals for this tender
+        Tender.getById(tender_id, (err, tenders) => {
+            if (err) {
+                console.error('Error checking tender for proposals:', err);
+                return res.status(500).send({ message: "Server error." });
+            }
+            if (tenders.length === 0) {
+                return res.status(404).send({ message: "Tender not found." });
+            }
+            const tender = tenders[0];
+
+            // Only client who created the tender or an admin can view proposals for it
+            if (tender.client_id !== currentUserId && currentUserType !== 'admin') {
+                return res.status(403).send({ message: "You are not authorized to view proposals for this tender." });
+            }
+
+            Proposal.findByTenderId(tender_id, (err, proposals) => {
+                if (err) {
+                    console.error('Error fetching proposals for tender:', err);
+                    return res.status(500).send({ message: "Error fetching proposals." });
+                }
+                res.status(200).send(proposals.map(proposal => {
+                    if (proposal.attachments) {
+                        proposal.attachments = JSON.parse(proposal.attachments);
+                    }
+                    return proposal;
+                }));
+            });
+        });
+    },
+
+    // Vendor: Get all proposals submitted by the authenticated vendor
+    getVendorProposals: (req, res) => {
+        const vendor_id = req.user.id;
+        Proposal.findByVendorId(vendor_id, (err, proposals) => {
+            if (err) {
+                console.error('Error fetching vendor proposals:', err);
+                return res.status(500).send({ message: "Error fetching your proposals." });
+            }
+            res.status(200).send(proposals.map(proposal => {
+                if (proposal.attachments) {
+                    proposal.attachments = JSON.parse(proposal.attachments);
+                }
+                return proposal;
+            }));
+        });
+    },
+
+    // Client/Admin: Update proposal status (accept/reject)
+    updateProposalStatus: (req, res) => {
+        const proposalId = req.params.id;
+        const { status } = req.body; // Expected status: 'accepted', 'rejected'
+        const currentUserId = req.user.id;
+        const currentUserType = req.user.user_type;
+
+        if (!status || !['accepted', 'rejected'].includes(status)) {
+            return res.status(400).send({ message: "Invalid status provided. Must be 'accepted' or 'rejected'." });
+        }
+
+        // Verify authorization: Only the client who owns the tender or an admin can change proposal status
+        Proposal.getById(proposalId, (err, proposals) => {
+            if (err) {
+                console.error('Error fetching proposal for status update:', err);
+                return res.status(500).send({ message: "Server error." });
+            }
+            if (proposals.length === 0) {
+                return res.status(404).send({ message: "Proposal not found." });
+            }
+            const proposal = proposals[0];
+
+            Tender.getById(proposal.tender_id, (err, tenders) => {
+                if (err) {
+                    console.error('Error fetching tender for proposal status update:', err);
+                    return res.status(500).send({ message: "Server error." });
+                }
+                if (tenders.length === 0) {
+                    return res.status(404).send({ message: "Associated tender not found." });
+                }
+                const tender = tenders[0];
+
+                if (tender.client_id !== currentUserId && currentUserType !== 'admin') {
+                    return res.status(403).send({ message: "You are not authorized to update this proposal's status." });
+                }
+
+                Proposal.update(proposalId, { status }, (err, result) => {
+                    if (err) {
+                        console.error('Error updating proposal status:', err);
+                        return res.status(500).send({ message: "Error updating proposal status." });
+                    }
+                    if (result.affectedRows === 0) {
+                        return res.status(404).send({ message: "Proposal not found for update." });
+                    }
+                    res.status(200).send({ message: `Proposal status updated to ${status} successfully!` });
+                });
+            });
+        });
+    },
+
+    // Admin: Delete any proposal
+    adminDeleteProposal: (req, res) => {
+        const proposalId = req.params.id;
+
+        Proposal.getById(proposalId, (err, proposals) => {
+            if (err) {
+                console.error('Error fetching proposal for admin deletion:', err);
+                return res.status(500).send({ message: "Error fetching proposal." });
+            }
+            if (proposals.length === 0) {
+                return res.status(404).send({ message: "Proposal not found." });
+            }
+            const proposal = proposals[0];
+
+            // Optionally, delete associated files from the filesystem here
+            if (proposal.attachments) {
+                try {
+                    const attachments = JSON.parse(proposal.attachments);
+                    attachments.forEach(filePath => {
+                        const fullPath = path.join(__dirname, '..', filePath);
+                        fs.unlink(fullPath, (unlinkErr) => {
+                            if (unlinkErr && unlinkErr.code !== 'ENOENT') {
+                                console.warn(`Failed to delete old attachment: ${fullPath}`, unlinkErr);
+                            }
+                        });
+                    });
+                } catch (e) {
+                    console.error('Error parsing attachments for deletion (admin):', e);
+                }
+            }
+
+            Proposal.delete(proposalId, (err, result) => {
+                if (err) {
+                    console.error('Error admin deleting proposal:', err);
+                    return res.status(500).send({ message: "Error deleting proposal." });
+                }
+                if (result.affectedRows === 0) {
+                    return res.status(404).send({ message: "Proposal not found for deletion." });
+                }
+                res.status(200).send({ message: "Proposal deleted by Admin successfully!" });
+            });
+        });
+    }
+};
+
+module.exports = proposalController;
+</file>
+
+<file path="backend/controllers/tenderController.js">
+const Tender = require('../models/Tender');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+
+// Configure Multer for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'uploads/tenders';
+        // Create directory if it doesn't exist
+        fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+const tenderController = {
+    // Client: Create a new tender
+    createTender: [
+        upload.array('attachments', 5), // Allow up to 5 attachments
+        (req, res) => {
+            const client_id = req.user.id; // From authMiddleware
+            const { title, description, category, budget_range, deadline, location, contact_info, status } = req.body;
+
+            // Basic validation
+            if (!title || !description || !deadline) {
+                return res.status(400).send({ message: "Title, Description, and Deadline are required." });
+            }
+
+            const attachments = req.files ? req.files.map(file => `/uploads/tenders/${file.filename}`) : [];
+
+            const tenderData = {
+                client_id,
+                title,
+                description,
+                category,
+                budget_range,
+                deadline,
+                location,
+                contact_info,
+                attachments: JSON.stringify(attachments), // Store as JSON string in DB
+                status: status || 'draft' // Default to draft
+            };
+
+            Tender.create(tenderData, (err, result) => {
+                if (err) {
+                    console.error('Error creating tender:', err);
+                    return res.status(500).send({ message: "Error creating tender." });
+                }
+                res.status(201).send({ message: "Tender created successfully!", tenderId: result.insertId });
+            });
+        }
+    ],
+
+    // Client: Get all tenders created by the authenticated client
+    getClientTenders: (req, res) => {
+        const client_id = req.user.id;
+        Tender.findByClientId(client_id, (err, tenders) => {
+            if (err) {
+                console.error('Error fetching client tenders:', err);
+                return res.status(500).send({ message: "Error fetching your tenders." });
+            }
+            res.status(200).send(tenders.map(tender => {
+                if (tender.attachments) {
+                    tender.attachments = JSON.parse(tender.attachments);
+                }
+                return tender;
+            }));
+        });
+    },
+
+    // Client: Update a specific tender
+    updateTender: [
+        upload.array('attachments', 5),
+        (req, res) => {
+            const tenderId = req.params.id;
+            const client_id = req.user.id; // Ensure client owns the tender
+            const { title, description, category, budget_range, deadline, location, contact_info, status, existingAttachments } = req.body;
+
+            Tender.getById(tenderId, (err, tenders) => {
+                if (err) {
+                    console.error('Error fetching tender for update:', err);
+                    return res.status(500).send({ message: "Error fetching tender." });
+                }
+                if (tenders.length === 0) {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+                const tender = tenders[0];
+                if (tender.client_id !== client_id) {
+                    return res.status(403).send({ message: "You are not authorized to update this tender." });
+                }
+
+                // Handle attachments: combine existing ones (passed as JSON string) with new uploads
+                let updatedAttachments = [];
+                if (existingAttachments) {
+                    try {
+                        updatedAttachments = JSON.parse(existingAttachments);
+                    } catch (e) {
+                        console.warn("Invalid existingAttachments JSON:", existingAttachments);
+                    }
+                }
+                const newAttachments = req.files ? req.files.map(file => `/uploads/tenders/${file.filename}`) : [];
+                updatedAttachments = updatedAttachments.concat(newAttachments);
+
+
+                const updateData = {
+                    title, description, category, budget_range, deadline, location, contact_info,
+                    attachments: JSON.stringify(updatedAttachments),
+                    status: status || tender.status // Allow updating status, or keep current
+                };
+
+                Tender.update(tenderId, updateData, (err, result) => {
+                    if (err) {
+                        console.error('Error updating tender:', err);
+                        return res.status(500).send({ message: "Error updating tender." });
+                    }
+                    if (result.affectedRows === 0) {
+                        return res.status(404).send({ message: "Tender not found for update." });
+                    }
+                    res.status(200).send({ message: "Tender updated successfully!" });
+                });
+            });
+        }
+    ],
+
+    // Client: Delete a specific tender
+    deleteTender: (req, res) => {
+        const tenderId = req.params.id;
+        const client_id = req.user.id;
+
+        Tender.getById(tenderId, (err, tenders) => {
+            if (err) {
+                console.error('Error fetching tender for deletion:', err);
+                return res.status(500).send({ message: "Error fetching tender." });
+            }
+            if (tenders.length === 0) {
+                return res.status(404).send({ message: "Tender not found." });
+            }
+            const tender = tenders[0];
+            if (tender.client_id !== client_id) {
+                return res.status(403).send({ message: "You are not authorized to delete this tender." });
+            }
+
+            // Optionally, delete associated files from the filesystem here
+            if (tender.attachments) {
+                try {
+                    const attachments = JSON.parse(tender.attachments);
+                    attachments.forEach(filePath => {
+                        const fullPath = path.join(__dirname, '..', filePath); // Assuming 'uploads' is in the root
+                        fs.unlink(fullPath, (unlinkErr) => {
+                            if (unlinkErr && unlinkErr.code !== 'ENOENT') { // ENOENT means file not found, which is fine
+                                console.warn(`Failed to delete old attachment: ${fullPath}`, unlinkErr);
+                            }
+                        });
+                    });
+                } catch (e) {
+                    console.error('Error parsing attachments for deletion:', e);
+                }
+            }
+
+
+            Tender.delete(tenderId, (err, result) => {
+                if (err) {
+                    console.error('Error deleting tender:', err);
+                    return res.status(500).send({ message: "Error deleting tender." });
+                }
+                if (result.affectedRows === 0) {
+                    return res.status(404).send({ message: "Tender not found for deletion." });
+                }
+                res.status(200).send({ message: "Tender deleted successfully!" });
+            });
+        });
+    },
+
+    // Vendor/Admin: Search and view active tenders
+    searchTenders: (req, res) => {
+        const { keywords, category, location, min_budget, max_budget, sort_by, order_by, status } = req.query;
+
+        // Admins can search for any status, others only 'active'
+        const allowedStatuses = req.user.user_type === 'admin' ? ['draft', 'active', 'closed', 'approved', 'rejected'] : ['active'];
+        let actualStatus = status && allowedStatuses.includes(status) ? status : 'active';
+        if (req.user.user_type === 'admin' && !status) { // Admin default is to see all if no status specified
+            actualStatus = null; // Don't filter by status if admin and no status provided
+        }
+
+
+        const filters = {
+            keywords,
+            category,
+            location,
+            min_budget,
+            max_budget,
+            status: actualStatus,
+            sort_by: sort_by || 'created_at',
+            order_by: order_by || 'DESC'
+        };
+
+        Tender.search(filters, (err, tenders) => {
+            if (err) {
+                console.error('Error searching tenders:', err);
+                return res.status(500).send({ message: "Error searching tenders." });
+            }
+            res.status(200).send(tenders.map(tender => {
+                if (tender.attachments) {
+                    tender.attachments = JSON.parse(tender.attachments);
+                }
+                return tender;
+            }));
+        });
+    },
+
+    // Vendor/Admin: Get full details of a specific tender
+    getTenderDetails: (req, res) => {
+        const { id } = req.params;
+        Tender.getById(id, (err, tenders) => {
+            if (err) {
+                console.error('Error fetching tender details:', err);
+                return res.status(500).send({ message: "Error fetching tender details." });
+            }
+            if (tenders.length === 0) {
+                return res.status(404).send({ message: "Tender not found." });
+            }
+            const tender = tenders[0];
+
+            // Only allow viewing 'draft' tenders if user is the client or an admin
+            if (tender.status === 'draft' && req.user.id !== tender.client_id && req.user.user_type !== 'admin') {
+                return res.status(403).send({ message: "You are not authorized to view this tender." });
+            }
+
+            if (tender.attachments) {
+                tender.attachments = JSON.parse(tender.attachments);
+            }
+            res.status(200).send(tender);
+        });
+    },
+
+    // Admin: Moderate/Approve/Reject tenders
+    moderateTender: (req, res) => {
+        const tenderId = req.params.id;
+        const { status } = req.body; // Expected status: 'approved', 'rejected', 'active', 'closed'
+
+        if (!status || !['active', 'approved', 'rejected', 'closed', 'draft'].includes(status)) {
+            return res.status(400).send({ message: "Invalid status provided. Must be 'active', 'approved', 'rejected', 'closed', or 'draft'." });
+        }
+
+        Tender.update(tenderId, { status }, (err, result) => {
+            if (err) {
+                console.error('Error moderating tender:', err);
+                return res.status(500).send({ message: "Error moderating tender." });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).send({ message: "Tender not found for moderation." });
+            }
+            res.status(200).send({ message: `Tender status updated to ${status} successfully!` });
+        });
+    },
+
+    // Admin: Edit any tender (similar to updateTender, but no client_id check)
+    adminEditTender: [
+        upload.array('attachments', 5),
+        (req, res) => {
+            const tenderId = req.params.id;
+            const { title, description, category, budget_range, deadline, location, contact_info, status, existingAttachments } = req.body;
+
+            Tender.getById(tenderId, (err, tenders) => {
+                if (err) {
+                    console.error('Error fetching tender for admin edit:', err);
+                    return res.status(500).send({ message: "Error fetching tender." });
+                }
+                if (tenders.length === 0) {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+
+                let updatedAttachments = [];
+                if (existingAttachments) {
+                    try {
+                        updatedAttachments = JSON.parse(existingAttachments);
+                    } catch (e) {
+                        console.warn("Invalid existingAttachments JSON:", existingAttachments);
+                    }
+                }
+                const newAttachments = req.files ? req.files.map(file => `/uploads/tenders/${file.filename}`) : [];
+                updatedAttachments = updatedAttachments.concat(newAttachments);
+
+                const updateData = {
+                    title, description, category, budget_range, deadline, location, contact_info,
+                    attachments: JSON.stringify(updatedAttachments),
+                    status: status || tenders[0].status
+                };
+
+                Tender.update(tenderId, updateData, (err, result) => {
+                    if (err) {
+                        console.error('Error admin editing tender:', err);
+                        return res.status(500).send({ message: "Error editing tender." });
+                    }
+                    if (result.affectedRows === 0) {
+                        return res.status(404).send({ message: "Tender not found for update." });
+                    }
+                    res.status(200).send({ message: "Tender updated by Admin successfully!" });
+                });
+            });
+        }
+    ],
+
+    // Admin: Delete any tender (similar to deleteTender, but no client_id check)
+    adminDeleteTender: (req, res) => {
+        const tenderId = req.params.id;
+
+        Tender.getById(tenderId, (err, tenders) => {
+            if (err) {
+                console.error('Error fetching tender for admin deletion:', err);
+                return res.status(500).send({ message: "Error fetching tender." });
+            }
+            if (tenders.length === 0) {
+                return res.status(404).send({ message: "Tender not found." });
+            }
+            const tender = tenders[0];
+
+            if (tender.attachments) {
+                try {
+                    const attachments = JSON.parse(tender.attachments);
+                    attachments.forEach(filePath => {
+                        const fullPath = path.join(__dirname, '..', filePath);
+                        fs.unlink(fullPath, (unlinkErr) => {
+                            if (unlinkErr && unlinkErr.code !== 'ENOENT') {
+                                console.warn(`Failed to delete old attachment: ${fullPath}`, unlinkErr);
+                            }
+                        });
+                    });
+                } catch (e) {
+                    console.error('Error parsing attachments for deletion (admin):', e);
+                }
+            }
+
+            Tender.delete(tenderId, (err, result) => {
+                if (err) {
+                    console.error('Error admin deleting tender:', err);
+                    return res.status(500).send({ message: "Error deleting tender." });
+                }
+                if (result.affectedRows === 0) {
+                    return res.status(404).send({ message: "Tender not found for deletion." });
+                }
+                res.status(200).send({ message: "Tender deleted by Admin successfully!" });
+            });
+        });
+    }
+};
+
+module.exports = tenderController;
+</file>
+
+<file path="backend/routes/proposalRoutes.js">
+const express = require('express');
+const proposalController = require('../controllers/proposalController');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+// --- Vendor Endpoints (Requires 'vendor' role) ---
+// Submit a new proposal for a tender
+router.post("/", authenticateToken, authorizeRoles(['vendor']), proposalController.submitProposal);
+// Get all proposals submitted by the authenticated vendor
+router.get("/my-proposals", authenticateToken, authorizeRoles(['vendor']), proposalController.getVendorProposals);
+
+// --- Client Endpoints (Requires 'client' role) ---
+// Get all proposals for a specific tender (client must own the tender)
+router.get("/tender/:tenderId", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.getProposalsForTender);
+// Client: Update proposal status (accept/reject)
+router.patch("/:id/status", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.updateProposalStatus);
+
+
+// --- Admin Endpoints (Requires 'admin' role) ---
+// Admin: Delete any proposal
+router.delete("/admin/:id", authenticateToken, authorizeRoles(['admin']), proposalController.adminDeleteProposal);
+
+module.exports = router;
+</file>
+
+<file path="backend/routes/tenderRoutes.js">
+const express = require('express');
+const tenderController = require('../controllers/tenderController');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+// --- Client Endpoints (Requires 'client' role) ---
+// Create a new tender
+router.post("/", authenticateToken, authorizeRoles(['client']), tenderController.createTender);
+// Get all tenders created by the authenticated client
+router.get("/my-tenders", authenticateToken, authorizeRoles(['client']), tenderController.getClientTenders);
+// Update a specific tender (owned by client)
+router.put("/:id", authenticateToken, authorizeRoles(['client']), tenderController.updateTender);
+// Delete a specific tender (owned by client)
+router.delete("/:id", authenticateToken, authorizeRoles(['client']), tenderController.deleteTender);
+
+
+// --- Vendor Endpoints (Requires 'vendor' role) ---
+// Search for active tenders (can also be accessed by admin for viewing)
+router.get("/search", authenticateToken, authorizeRoles(['vendor', 'admin']), tenderController.searchTenders);
+// Get full details of a specific tender (publicly viewable by vendor if active/approved, by client if draft, by admin always)
+router.get("/:id", authenticateToken, authorizeRoles(['client', 'vendor', 'admin']), tenderController.getTenderDetails);
+
+
+// --- Admin Endpoints (Requires 'admin' role) ---
+// Admin: Moderate (approve/reject/change status) a tender
+router.patch("/:id/moderate", authenticateToken, authorizeRoles(['admin']), tenderController.moderateTender);
+// Admin: Edit any tender (full update)
+router.put("/admin/:id", authenticateToken, authorizeRoles(['admin']), tenderController.adminEditTender);
+// Admin: Delete any tender
+router.delete("/admin/:id", authenticateToken, authorizeRoles(['admin']), tenderController.adminDeleteTender);
+
+
+module.exports = router;
 </file>
 
 <file path="backend/app.js">
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const itemRoutes = require('./routes/itemRoutes');
-const authRoutes = require('./routes/authRoutes'); // Import auth routes
 const dotenv = require('dotenv'); // To load environment variables
 
 dotenv.config(); // Load .env file
 
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes'); // New: For profile management & admin user management
+const tenderRoutes = require('./routes/tenderRoutes'); // New: For client tenders & vendor search/proposals
+const proposalRoutes = require('./routes/proposalRoutes'); // New: For vendor proposals
+
 const app = express();
-const port = 7000;
+const port = process.env.PORT || 7000;
 
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
 
+// Serve static files (e.g., for attachments)
+// Create an 'uploads' directory in your backend root.
+app.use('/uploads', express.static('uploads'));
+
 // API Routes
-app.use('/api', itemRoutes);
-app.use('/api/auth', authRoutes); // All authentication routes under /api/auth
+app.use('/api/auth', authRoutes); // Authentication (register, login, forgot/reset password)
+app.use('/api/users', userRoutes); // User profile management and Admin user management
+app.use('/api/tenders', tenderRoutes); // Client tender creation/management, Vendor tender search
+app.use('/api/proposals', proposalRoutes); // Vendor proposal submission
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
-    res.send('Server is running and ready for API requests!');
+    res.send('Tender Management System API is running!');
 });
 
 // Start the server
@@ -619,6 +2107,7 @@ module.exports = app;
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
     "mysql": "^2.18.1",
     "nodemailer": "^6.9.14"
   },
