@@ -66,6 +66,60 @@ Spare/contex
 <files>
 This section contains the contents of the repository's files.
 
+<file path=".gitattributes">
+# Auto detect text files and perform LF normalization
+* text=auto
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
+<file path="backend/config/db.js">
+const mysql = require('mysql');
+
+const sqlconnect = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'practice_db',
+    multipleStatements: true
+});
+
+sqlconnect.connect((err) => {
+    if (!err) {
+        console.log('DB connection succeeded');
+    } else {
+        console.error('DB connection failed:', err.message);
+    }
+});
+
+module.exports = sqlconnect;
+</file>
+
 <file path="backend/controllers/userController.js">
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
@@ -261,60 +315,6 @@ router.delete("/:id", authenticateToken, authorizeRoles(['admin']), userControll
 
 
 module.exports = router;
-</file>
-
-<file path=".gitattributes">
-# Auto detect text files and perform LF normalization
-* text=auto
-</file>
-
-<file path=".gitignore">
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-</file>
-
-<file path="backend/config/db.js">
-const mysql = require('mysql');
-
-const sqlconnect = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'practice_db',
-    multipleStatements: true
-});
-
-sqlconnect.connect((err) => {
-    if (!err) {
-        console.log('DB connection succeeded');
-    } else {
-        console.error('DB connection failed:', err.message);
-    }
-});
-
-module.exports = sqlconnect;
 </file>
 
 <file path="backend/controllers/authController.js">
