@@ -1,3 +1,4 @@
+// controllers/tenderController.js
 const Tender = require('../models/Tender');
 const path = require('path');
 const fs = require('fs');
@@ -18,6 +19,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 const tenderController = {
+    // --- Client Functions (Re-inserted Original Logic) ---
+
     // Client: Create a new tender
     createTender: [
         upload.array('attachments', 5), // Allow up to 5 attachments
@@ -93,7 +96,7 @@ const tenderController = {
                     return res.status(403).send({ message: "You are not authorized to update this tender." });
                 }
 
-                // Handle attachments: combine existing ones (passed as JSON string) with new uploads
+                // Handle attachments: combine existing ones with new uploads
                 let updatedAttachments = [];
                 if (existingAttachments) {
                     try {
@@ -109,7 +112,7 @@ const tenderController = {
                 const updateData = {
                     title, description, category, budget_range, deadline, location, contact_info,
                     attachments: JSON.stringify(updatedAttachments),
-                    status: status || tender.status // Allow updating status, or keep current
+                    status: status || tender.status
                 };
 
                 Tender.update(tenderId, updateData, (err, result) => {
@@ -146,12 +149,13 @@ const tenderController = {
 
             // Optionally, delete associated files from the filesystem here
             if (tender.attachments) {
+                // ... (File deletion logic remains the same)
                 try {
                     const attachments = JSON.parse(tender.attachments);
                     attachments.forEach(filePath => {
-                        const fullPath = path.join(__dirname, '..', filePath); // Assuming 'uploads' is in the root
+                        const fullPath = path.join(__dirname, '..', filePath);
                         fs.unlink(fullPath, (unlinkErr) => {
-                            if (unlinkErr && unlinkErr.code !== 'ENOENT') { // ENOENT means file not found, which is fine
+                            if (unlinkErr && unlinkErr.code !== 'ENOENT') {
                                 console.warn(`Failed to delete old attachment: ${fullPath}`, unlinkErr);
                             }
                         });
@@ -174,16 +178,152 @@ const tenderController = {
             });
         });
     },
+    // -----------------------------------------------------
 
-    // Vendor/Admin: Search and view active tenders
+    // --- NEW Client Management Functions ---
+
+    /**
+     * Client: Publish a tender (Change status from 'draft' to 'active').
+     * Requirement: Publish Tender
+     */
+    publishTender: (req, res) => {
+        const tenderId = req.params.id;
+        const client_id = req.user.id;
+
+        Tender.getById(tenderId, (err, tenders) => {
+            if (err) return res.status(500).send({ message: "Error fetching tender." });
+            if (tenders.length === 0) return res.status(404).send({ message: "Tender not found." });
+            const tender = tenders[0];
+
+            if (tender.client_id !== client_id) {
+                return res.status(403).send({ message: "You are not authorized to publish this tender." });
+            }
+            if (tender.status !== 'draft') {
+                return res.status(400).send({ message: `Cannot publish a tender that is already ${tender.status}.` });
+            }
+
+            // Update status to 'active'
+            Tender.update(tenderId, { status: 'active', published_at: new Date() }, (updateErr) => {
+                if (updateErr) {
+                    console.error('Error publishing tender:', updateErr);
+                    return res.status(500).send({ message: "Error publishing tender." });
+                }
+                res.status(200).send({ message: "Tender published successfully (Status: active)." });
+            });
+        });
+    },
+
+    /**
+     * Client: Extend the submission deadline for an active tender.
+     * Requirement: Extend Deadline
+     */
+    extendDeadline: (req, res) => {
+        const tenderId = req.params.id;
+        const client_id = req.user.id;
+        const { new_deadline } = req.body;
+
+        if (!new_deadline || isNaN(Date.parse(new_deadline))) {
+            return res.status(400).send({ message: "A valid new_deadline field is required." });
+        }
+
+        Tender.getById(tenderId, (err, tenders) => {
+            if (err) return res.status(500).send({ message: "Error fetching tender." });
+            if (tenders.length === 0) return res.status(404).send({ message: "Tender not found." });
+            const tender = tenders[0];
+
+            if (tender.client_id !== client_id) {
+                return res.status(403).send({ message: "You are not authorized to modify this tender." });
+            }
+            if (tender.status !== 'active') {
+                return res.status(400).send({ message: "Only active tenders can have their deadline extended." });
+            }
+            if (new Date(new_deadline) <= new Date(tender.deadline)) {
+                 return res.status(400).send({ message: "The new deadline must be later than the current deadline." });
+            }
+
+            Tender.update(tenderId, { deadline: new_deadline }, (updateErr) => {
+                if (updateErr) {
+                    console.error('Error extending deadline:', updateErr);
+                    return res.status(500).send({ message: "Error extending deadline." });
+                }
+                res.status(200).send({ message: `Deadline extended successfully to ${new_deadline}.` });
+            });
+        });
+    },
+
+    /**
+     * Client: Close a tender (stop accepting new proposals).
+     * Requirement: Close Tender
+     */
+    closeTender: (req, res) => {
+        const tenderId = req.params.id;
+        const client_id = req.user.id;
+
+        Tender.getById(tenderId, (err, tenders) => {
+            if (err) return res.status(500).send({ message: "Error fetching tender." });
+            if (tenders.length === 0) return res.status(404).send({ message: "Tender not found." });
+            const tender = tenders[0];
+
+            if (tender.client_id !== client_id) {
+                return res.status(403).send({ message: "You are not authorized to close this tender." });
+            }
+            if (['closed', 'archived'].includes(tender.status)) {
+                return res.status(400).send({ message: `Tender is already ${tender.status}.` });
+            }
+
+            // Update status to 'closed'
+            Tender.update(tenderId, { status: 'closed' }, (updateErr) => {
+                if (updateErr) {
+                    console.error('Error closing tender:', updateErr);
+                    return res.status(500).send({ message: "Error closing tender." });
+                }
+                res.status(200).send({ message: "Tender closed successfully." });
+            });
+        });
+    },
+
+    /**
+     * Client: Archive closed tenders.
+     * Requirement: Archive Tender
+     */
+    archiveTender: (req, res) => {
+        const tenderId = req.params.id;
+        const client_id = req.user.id;
+
+        Tender.getById(tenderId, (err, tenders) => {
+            if (err) return res.status(500).send({ message: "Error fetching tender." });
+            if (tenders.length === 0) return res.status(404).send({ message: "Tender not found." });
+            const tender = tenders[0];
+
+            if (tender.client_id !== client_id) {
+                return res.status(403).send({ message: "You are not authorized to archive this tender." });
+            }
+            if (tender.status !== 'closed') {
+                return res.status(400).send({ message: "Only closed tenders can be archived." });
+            }
+
+            // Update status to 'archived'
+            Tender.update(tenderId, { status: 'archived' }, (updateErr) => {
+                if (updateErr) {
+                    console.error('Error archiving tender:', updateErr);
+                    return res.status(500).send({ message: "Error archiving tender." });
+                }
+                res.status(200).send({ message: "Tender archived successfully." });
+            });
+        });
+    },
+    // -----------------------------------------------------
+
+    // --- Vendor/Admin Functions (Re-inserted Original Logic & Modifications) ---
+
+    // Vendor/Admin: Search and view active tenders (Updated to include Posting Date filtering)
     searchTenders: (req, res) => {
-        const { keywords, category, location, min_budget, max_budget, sort_by, order_by, status } = req.query;
+        const { keywords, category, location, min_budget, max_budget, sort_by, order_by, status, posting_date_start, posting_date_end } = req.query;
 
-        // Admins can search for any status, others only 'active'
-        const allowedStatuses = req.user.user_type === 'admin' ? ['draft', 'active', 'closed', 'approved', 'rejected'] : ['active'];
+        const allowedStatuses = req.user.user_type === 'admin' ? ['draft', 'active', 'closed', 'approved', 'rejected', 'archived'] : ['active'];
         let actualStatus = status && allowedStatuses.includes(status) ? status : 'active';
-        if (req.user.user_type === 'admin' && !status) { // Admin default is to see all if no status specified
-            actualStatus = null; // Don't filter by status if admin and no status provided
+        if (req.user.user_type === 'admin' && !status) {
+            actualStatus = null;
         }
 
 
@@ -194,6 +334,8 @@ const tenderController = {
             min_budget,
             max_budget,
             status: actualStatus,
+            posting_date_start,
+            posting_date_end,
             sort_by: sort_by || 'created_at',
             order_by: order_by || 'DESC'
         };
@@ -207,6 +349,8 @@ const tenderController = {
                 if (tender.attachments) {
                     tender.attachments = JSON.parse(tender.attachments);
                 }
+                // Hide contact info from vendors
+                delete tender.contact_info; 
                 return tender;
             }));
         });
@@ -240,10 +384,10 @@ const tenderController = {
     // Admin: Moderate/Approve/Reject tenders
     moderateTender: (req, res) => {
         const tenderId = req.params.id;
-        const { status } = req.body; // Expected status: 'approved', 'rejected', 'active', 'closed'
+        const { status } = req.body; 
 
-        if (!status || !['active', 'approved', 'rejected', 'closed', 'draft'].includes(status)) {
-            return res.status(400).send({ message: "Invalid status provided. Must be 'active', 'approved', 'rejected', 'closed', or 'draft'." });
+        if (!status || !['active', 'approved', 'rejected', 'closed', 'draft', 'archived'].includes(status)) {
+            return res.status(400).send({ message: "Invalid status provided." });
         }
 
         Tender.update(tenderId, { status }, (err, result) => {
@@ -258,7 +402,7 @@ const tenderController = {
         });
     },
 
-    // Admin: Edit any tender (similar to updateTender, but no client_id check)
+    // Admin: Edit any tender
     adminEditTender: [
         upload.array('attachments', 5),
         (req, res) => {
@@ -305,7 +449,7 @@ const tenderController = {
         }
     ],
 
-    // Admin: Delete any tender (similar to deleteTender, but no client_id check)
+    // Admin: Delete any tender
     adminDeleteTender: (req, res) => {
         const tenderId = req.params.id;
 
@@ -320,6 +464,7 @@ const tenderController = {
             const tender = tenders[0];
 
             if (tender.attachments) {
+                // ... (File deletion logic remains the same)
                 try {
                     const attachments = JSON.parse(tender.attachments);
                     attachments.forEach(filePath => {

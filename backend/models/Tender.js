@@ -1,28 +1,34 @@
+// models/Tender.js
 const db = require('../config/db');
 
 const Tender = {
+    
+    // REQUIRED: Used in createTender controller
     create: (tenderData, callback) => {
-        const { client_id, title, description, category, budget_range, deadline, location, contact_info, attachments, status } = tenderData;
-        const sql = `INSERT INTO tenders (client_id, title, description, category, budget_range, deadline, location, contact_info, attachments, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        db.query(sql, [client_id, title, description, category, budget_range, deadline, location, contact_info, attachments, status], callback);
+        // tenderData contains client_id, title, description, attachments (JSON string), etc.
+        const sql = 'INSERT INTO tenders SET ?';
+        db.query(sql, tenderData, callback);
     },
 
-    // Get all tenders (for admin or general search)
-    getAll: (callback) => {
-        db.query("SELECT * FROM tenders", callback);
-    },
-
-    // Get a single tender by ID
+    // REQUIRED: Used in updateTender, deleteTender, publishTender, extendDeadline, closeTender, archiveTender, getTenderDetails
     getById: (id, callback) => {
-        db.query("SELECT * FROM tenders WHERE id = ?", [id], callback);
+        const sql = 'SELECT * FROM tenders WHERE id = ?';
+        db.query(sql, [id], callback);
+    },
+    
+    // REQUIRED: Used in getClientTenders controller
+    findByClientId: (client_id, callback) => {
+        const sql = 'SELECT * FROM tenders WHERE client_id = ? ORDER BY created_at DESC';
+        db.query(sql, [client_id], callback);
+    },
+    
+    // REQUIRED: Used in deleteTender controller
+    delete: (id, callback) => {
+        const sql = 'DELETE FROM tenders WHERE id = ?';
+        db.query(sql, [id], callback);
     },
 
-    // Get tenders by a specific client
-    findByClientId: (clientId, callback) => {
-        db.query("SELECT * FROM tenders WHERE client_id = ?", [clientId], callback);
-    },
-
+    // Existing update function
     update: (id, tenderData, callback) => {
         const fields = [];
         const values = [];
@@ -35,20 +41,15 @@ const Tender = {
         }
 
         if (fields.length === 0) {
-            return callback(null, { affectedRows: 0 }); // No fields to update
+            return callback(null, { affectedRows: 0 });
         }
 
         const sql = `UPDATE tenders SET ${fields.join(', ')} WHERE id = ?`;
         values.push(id);
         db.query(sql, values, callback);
     },
-
-    delete: (id, callback) => {
-        const sql = "DELETE FROM tenders WHERE id = ?";
-        db.query(sql, [id], callback);
-    },
-
-    // Search tenders with filters
+    
+    // Existing search function
     search: (filters, callback) => {
         let sql = `SELECT t.*, u.name as client_name, u.company_name as client_company
                    FROM tenders t
@@ -69,26 +70,28 @@ const Tender = {
             sql += ` AND t.location LIKE ?`;
             values.push(`%${filters.location}%`);
         }
+        
+        if (filters.posting_date_start) {
+            sql += ` AND DATE(t.created_at) >= ?`;
+            values.push(filters.posting_date_start);
+        }
+        if (filters.posting_date_end) {
+            sql += ` AND DATE(t.created_at) <= ?`;
+            values.push(filters.posting_date_end);
+        }
+        
         if (filters.min_budget) {
-            // Assuming budget_range is flexible string, might need parsing or better schema
-            // For now, a simple LIKE search or client-side filtering might be necessary
-            // Or a more complex SQL query if budget_range had specific numeric format
-            sql += ` AND (t.budget_range LIKE ? OR t.budget_range = 'Negotiable')`; // Very basic, improve as needed
+            sql += ` AND (t.budget_range LIKE ? OR t.budget_range = 'Negotiable')`; 
             values.push(`%${filters.min_budget}%`);
         }
         if (filters.max_budget) {
-            sql += ` AND (t.budget_range LIKE ? OR t.budget_range = 'Negotiable')`; // Very basic, improve as needed
+            sql += ` AND (t.budget_range LIKE ? OR t.budget_range = 'Negotiable')`; 
             values.push(`%${filters.max_budget}%`);
         }
         if (filters.status) {
             sql += ` AND t.status = ?`;
             values.push(filters.status);
-        } else if (filters.status === null && !filters.keywords && !filters.category && !filters.location && !filters.min_budget && !filters.max_budget) {
-            // If admin searches without status, show all except drafts by default, or explicitly all
-            // For general users, default to 'active' is handled in controller
-            // If admin explicitly wants all, the status should be 'all' or similar
-            // For now, if null for admin, it means no status filter applied
-        }
+        } 
 
 
         // Ordering
