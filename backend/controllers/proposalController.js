@@ -128,8 +128,8 @@ const proposalController = {
         const currentUserId = req.user.id;
         const currentUserType = req.user.user_type;
 
-        if (!status || !['accepted', 'rejected'].includes(status)) {
-            return res.status(400).send({ message: "Invalid status provided. Must be 'accepted' or 'rejected'." });
+        if (!status || !['accepted', 'rejected','shortlisted'].includes(status)) {
+            return res.status(400).send({ message: "Invalid status provided. Must be 'accepted' or 'rejected' or 'shortlisted'." });
         }
 
         // Verify authorization: Only the client who owns the tender or an admin can change proposal status
