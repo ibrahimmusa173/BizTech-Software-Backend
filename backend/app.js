@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes'); // New: For profile management & admin user management
 const tenderRoutes = require('./routes/tenderRoutes'); // New: For client tenders & vendor search/proposals
 const proposalRoutes = require('./routes/proposalRoutes'); // New: For vendor proposals
+const notificationRoutes = require('./routes/notificationRoutes'); // NEW: For user notifications
 
 const app = express();
 const port = process.env.PORT || 7000;
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes); // Authentication (register, login, forgot/res
 app.use('/api/users', userRoutes); // User profile management and Admin user management
 app.use('/api/tenders', tenderRoutes); // Client tender creation/management, Vendor tender search
 app.use('/api/proposals', proposalRoutes); // Vendor proposal submission
+app.use('/api/notifications', notificationRoutes); // NEW
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {

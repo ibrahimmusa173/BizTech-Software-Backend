@@ -1,5 +1,6 @@
 const Proposal = require('../models/Proposal');
 const Tender = require('../models/Tender'); // To check tender status
+const Notification = require('../models/Notification'); 
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
@@ -61,6 +62,20 @@ const proposalController = {
                         console.error('Error submitting proposal:', err);
                         return res.status(500).send({ message: "Error submitting proposal." });
                     }
+
+
+                     // --- NEW: Notify Client of New Proposal ---
+                    const proposalId = result.insertId;
+                    Notification.create({
+                        user_id: tender.client_id,
+                        type: 'proposal_submission',
+                        message: `New proposal submitted for your tender: ${tender.title}`,
+                        reference_id: proposalId
+                    }, (notifErr) => {
+                        if (notifErr) console.warn('Failed to create proposal submission notification:', notifErr);
+                    });
+
+
                     res.status(201).send({ message: "Proposal submitted successfully!", proposalId: result.insertId });
                 });
             });
@@ -165,6 +180,28 @@ const proposalController = {
                     if (result.affectedRows === 0) {
                         return res.status(404).send({ message: "Proposal not found for update." });
                     }
+
+                       
+                     // --- NEW: Notify Vendor of Proposal Status Update ---
+                let statusMessage;
+                if (status === 'shortlisted') {
+                    statusMessage = `Your proposal for tender "${tender.title}" has been shortlisted!`;
+                } else if (status === 'accepted') {
+                    statusMessage = `Your proposal for tender "${tender.title}" has been accepted (Awarded)!`;
+                } else {
+                    statusMessage = `Your proposal for tender "${tender.title}" has been rejected.`;
+                }
+                
+                Notification.create({
+                    user_id: proposal.vendor_id,
+                    type: `proposal_status_${status}`,
+                    message: statusMessage,
+                    reference_id: proposalId
+                }, (notifErr) => {
+                    if (notifErr) console.warn('Failed to create vendor status notification:', notifErr);
+                });
+
+
                     res.status(200).send({ message: `Proposal status updated to ${status} successfully!` });
                 });
             });
