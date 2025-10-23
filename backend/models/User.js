@@ -20,23 +20,14 @@ const User = {
         bcrypt.hash(password, 10, (err, hashedPassword) => {
             if (err) return callback(err);
 
-            const sql = "INSERT INTO users (name, company_name, email, password, user_type, is_active) VALUES (?, ?, ?, ?, ?, TRUE)";
-            // ASSUMPTION: New users are active by default (is_active: TRUE)
+            const sql = "INSERT INTO users (name, company_name, email, password, user_type) VALUES (?, ?, ?, ?, ?)";
             db.query(sql, [name, company_name, email, hashedPassword, user_type], callback);
         });
     },
 
-    /**
-     * getAll (Enhanced for Admin View)
-     * Retrieves all users, explicitly excluding sensitive fields from the SQL selection.
-     */
+    // Dummy method for getting all users (can be expanded for admin view)
     getAll: (callback) => {
-        const sql = `
-            SELECT 
-                id, name, company_name, email, user_type, is_active, created_at, updated_at 
-            FROM users 
-            ORDER BY created_at DESC`; // Added is_active to the selection list for admin management
-        db.query(sql, callback);
+        db.query("SELECT id, name, company_name, email, user_type, created_at, updated_at FROM users", callback);
     },
 
     // General update method for user profile and admin management
@@ -46,7 +37,6 @@ const User = {
 
         // Handle password separately to hash it
         if (userData.password) {
-            // Note: Update logic requires User._buildUpdateQuery to handle asynchronous bcrypt hashing
             bcrypt.hash(userData.password, 10, (err, hashedPassword) => {
                 if (err) return callback(err);
                 fields.push("password = ?");
@@ -55,20 +45,13 @@ const User = {
                 User._buildUpdateQuery(userId, userData, fields, values, callback);
             });
         } else {
-            // Standard update path (synchronous)
             User._buildUpdateQuery(userId, userData, fields, values, callback);
         }
     },
 
-    /**
-     * Utility function to dynamically construct the SQL UPDATE query.
-     * Note: This function handles fields that were already built (e.g., password hash) 
-     * and new fields from userData.
-     */
     _buildUpdateQuery: (userId, userData, fields, values, callback) => {
         for (const key in userData) {
-            // Ensure we don't accidentally try to update primary key or undefined values
-            if (userData.hasOwnProperty(key) && userData[key] !== undefined && key !== 'id') {
+            if (userData.hasOwnProperty(key) && userData[key] !== undefined) {
                 fields.push(`${key} = ?`);
                 values.push(userData[key]);
             }
@@ -88,15 +71,8 @@ const User = {
         const sql = "DELETE FROM users WHERE id = ?";
         db.query(sql, [id], callback);
     },
-    
-    // Admin Analytics Function
-    countUsersByTypeAndStatus: (callback) => {
-        // ASSUMPTION: 'is_active' column exists in the 'users' table
-        const sql = `SELECT user_type, is_active, COUNT(id) as count FROM users GROUP BY user_type, is_active`;
-        db.query(sql, callback);
-    },
 
-    // --- Methods for password reset (kept as is) ---
+    // --- Methods for password reset (already existing, kept as is) ---
 
     // Save reset token and expiry to the database for a user
     saveResetToken: (email, token, expire, callback) => {

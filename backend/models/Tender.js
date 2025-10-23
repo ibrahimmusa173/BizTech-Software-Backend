@@ -98,18 +98,6 @@ const Tender = {
         sql += ` ORDER BY t.${filters.sort_by || 'created_at'} ${filters.order_by === 'ASC' ? 'ASC' : 'DESC'}`;
 
         db.query(sql, values, callback);
-    },
-    
-    // New Function for Admin Analytics
-    countTendersByStatus: (callback) => {
-        const sql = `SELECT status, COUNT(id) as count FROM tenders GROUP BY status`;
-        db.query(sql, callback);
-    },
-    
-    // New Function for Admin Analytics
-    countTendersPostedLast30Days: (callback) => {
-        const sql = `SELECT COUNT(id) as count FROM tenders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`;
-        db.query(sql, callback);
     }
 };
 
