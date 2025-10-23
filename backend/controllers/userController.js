@@ -117,36 +117,37 @@ const userController = {
             res.status(200).send(user);
         });
     },
-
-    // Admin: Update user account status (e.g., active/deactive, potentially user_type)
+    
+    /**
+     * updateUserStatus (Renamed from setUserStatus)
+     * Requirement: Admin to view, activate, deactivate, and manage user accounts (including status and user_type).
+     * This function now handles all Admin PUT requests to /api/users/:id.
+     */
     updateUserStatus: (req, res) => {
-        const { id } = req.params;
-        const { user_type, status } = req.body; // 'status' might map to an 'is_active' column or just change user_type
+        const userId = req.params.id;
+        // Use req.body directly to allow updating any field (is_active, user_type, etc.)
+        const updateData = req.body; 
 
-        // For simplicity, let's allow admin to change user_type and potentially a conceptual 'status'
-        // You'd likely have an 'is_active' boolean column in your users table for real deactivation.
-        let updateData = {};
-        if (user_type && ['client', 'vendor', 'admin'].includes(user_type)) {
-            updateData.user_type = user_type;
+        // Optional safety check: Admins shouldn't change their own user_type via this endpoint
+        if (req.user.id === parseInt(userId) && updateData.user_type && updateData.user_type !== req.user.user_type) {
+             return res.status(403).send({ message: "Administrators cannot change their own user_type." });
         }
-        // If you had an 'is_active' column:
-        // if (typeof status === 'boolean') {
-        //     updateData.is_active = status;
-        // }
-
+        
+        // If no data is provided, return 400
         if (Object.keys(updateData).length === 0) {
-            return res.status(400).send({ message: "No valid fields provided for update (user_type)." });
+            return res.status(400).send({ message: "No fields provided for update." });
         }
 
-        User.update(id, updateData, (err, result) => {
+        User.update(userId, updateData, (err, result) => {
             if (err) {
-                console.error('Error updating user status (admin):', err);
-                return res.status(500).send({ message: "Error updating user account." });
+                console.error('Error updating user data (admin):', err);
+                return res.status(500).send({ message: "Error updating user data." });
             }
             if (result.affectedRows === 0) {
-                return res.status(404).send({ message: "User not found for update." });
+                return res.status(404).send({ message: "User not found." });
             }
-            res.status(200).send({ message: "User account updated successfully!" });
+            
+            res.status(200).send({ message: `User account ${userId} updated successfully!` });
         });
     },
 

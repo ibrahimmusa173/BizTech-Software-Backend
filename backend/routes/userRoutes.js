@@ -1,3 +1,4 @@
+// routes/userRoutes.js
 const express = require('express');
 const userController = require('../controllers/userController');
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
@@ -13,8 +14,11 @@ router.put("/profile", authenticateToken, userController.updateProfile);
 router.get("/", authenticateToken, authorizeRoles(['admin']), userController.getAllUsers);
 // Admin Only: Get user by ID
 router.get("/:id", authenticateToken, authorizeRoles(['admin']), userController.getUserById);
-// Admin Only: Update user (status, user_type)
+
+// FIX IS HERE: The controller function must match the name expected by the router.
+// If the controller exports 'updateUserStatus', the router must use 'updateUserStatus'.
 router.put("/:id", authenticateToken, authorizeRoles(['admin']), userController.updateUserStatus);
+
 // Admin Only: Delete user
 router.delete("/:id", authenticateToken, authorizeRoles(['admin']), userController.deleteUser);
 

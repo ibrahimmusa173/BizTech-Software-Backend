@@ -3,6 +3,7 @@ const Tender = require('../models/Tender'); // To check tender status
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const Notification = require('../models/Notification'); // <-- ADDED
 
 // Configure Multer for file uploads for proposals
 const storage = multer.diskStorage({
@@ -61,7 +62,20 @@ const proposalController = {
                         console.error('Error submitting proposal:', err);
                         return res.status(500).send({ message: "Error submitting proposal." });
                     }
-                    res.status(201).send({ message: "Proposal submitted successfully!", proposalId: result.insertId });
+
+                    const proposalId = result.insertId;
+                    const client_id = tender.client_id; 
+
+                    // --- NEW NOTIFICATION LOGIC (Client: New Proposal Submission) ---
+                    if (client_id) {
+                        const message = `A new proposal has been submitted for your tender (ID: ${tender_id}).`;
+                        Notification.create(client_id, message, 'new_proposal', proposalId, (notifErr) => {
+                            if (notifErr) console.error("Error creating new proposal notification:", notifErr);
+                        });
+                    }
+                    // -----------------------------------------------------------------
+
+                    res.status(201).send({ message: "Proposal submitted successfully!", proposalId: proposalId });
                 });
             });
         }
@@ -129,7 +143,7 @@ const proposalController = {
         const currentUserType = req.user.user_type;
 
         if (!status || !['accepted', 'rejected','shortlisted'].includes(status)) {
-            return res.status(400).send({ message: "Invalid status provided. Must be 'accepted' or 'rejected' or 'shortlisted'." });
+            return res.status(400).send({ message: "Invalid status provided. Must be 'accepted' or 'rejected' or." });
         }
 
         // Verify authorization: Only the client who owns the tender or an admin can change proposal status
@@ -165,6 +179,18 @@ const proposalController = {
                     if (result.affectedRows === 0) {
                         return res.status(404).send({ message: "Proposal not found for update." });
                     }
+
+                    const vendor_id = proposal.vendor_id;
+                    
+                    // --- NEW NOTIFICATION LOGIC (Vendor: Status Update) ---
+                    if (vendor_id) {
+                        const message = `Your proposal (ID: ${proposalId}) has been updated to '${status}'.`;
+                        Notification.create(vendor_id, message, 'proposal_status', proposalId, (notifErr) => {
+                            if (notifErr) console.error("Error creating status update notification:", notifErr);
+                        });
+                    }
+                    // ------------------------------------------------------
+
                     res.status(200).send({ message: `Proposal status updated to ${status} successfully!` });
                 });
             });

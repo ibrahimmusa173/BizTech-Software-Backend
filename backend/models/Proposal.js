@@ -53,6 +53,12 @@ const Proposal = {
     delete: (id, callback) => {
         const sql = "DELETE FROM proposals WHERE id = ?";
         db.query(sql, [id], callback);
+    },
+
+    // New Function for Admin Analytics
+    countProposalsByStatus: (callback) => {
+        const sql = `SELECT status, COUNT(id) as count FROM proposals GROUP BY status`;
+        db.query(sql, callback);
     }
 };
 
