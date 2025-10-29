@@ -381,6 +381,22 @@ const tenderController = {
         });
     },
 
+    // Admin: View all tenders on the platform
+    getAllTendersAdmin: (req, res) => {
+        Tender.getAll((err, tenders) => { 
+            if (err) {
+                console.error('Error fetching all tenders (Admin):', err);
+                return res.status(500).send({ message: "Error fetching all tenders." });
+            }
+            res.status(200).send(tenders.map(tender => {
+                if (tender.attachments) {
+                    tender.attachments = JSON.parse(tender.attachments);
+                }
+                return tender;
+            }));
+        });
+    },
+
     // Admin: Moderate/Approve/Reject tenders
     moderateTender: (req, res) => {
         const tenderId = req.params.id;

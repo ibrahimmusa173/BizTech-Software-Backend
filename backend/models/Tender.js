@@ -48,6 +48,15 @@ const Tender = {
         values.push(id);
         db.query(sql, values, callback);
     },
+
+    // NEW: Get all tenders for Admin view
+    getAll: (callback) => {
+        const sql = `SELECT t.*, u.name as client_name, u.company_name as client_company
+                     FROM tenders t
+                     JOIN users u ON t.client_id = u.id
+                     ORDER BY created_at DESC`;
+        db.query(sql, callback);
+    },
     
     // Existing search function
     search: (filters, callback) => {

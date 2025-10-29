@@ -11,6 +11,16 @@ const Proposal = {
     getById: (id, callback) => {
         db.query("SELECT * FROM proposals WHERE id = ?", [id], callback);
     },
+    
+    // NEW: Get all proposals for Admin view
+    getAll: (callback) => {
+        const sql = `SELECT p.*, t.title as tender_title, u.name as vendor_name, u.company_name as vendor_company
+                     FROM proposals p
+                     JOIN tenders t ON p.tender_id = t.id
+                     JOIN users u ON p.vendor_id = u.id
+                     ORDER BY p.created_at DESC`;
+        db.query(sql, callback);
+    },
 
     // Get all proposals for a specific tender (for client/admin to view)
     findByTenderId: (tenderId, callback) => {

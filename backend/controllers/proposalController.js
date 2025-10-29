@@ -208,6 +208,24 @@ const proposalController = {
         });
     },
 
+    // --- NEW ADMIN FUNCTION ---
+    
+    // Admin: View all proposals submitted on the platform
+    getAllProposalsAdmin: (req, res) => {
+        Proposal.getAll((err, proposals) => { 
+            if (err) {
+                console.error('Error fetching all proposals (Admin):', err);
+                return res.status(500).send({ message: "Error fetching all proposals." });
+            }
+            res.status(200).send(proposals.map(proposal => {
+                if (proposal.attachments) {
+                    proposal.attachments = JSON.parse(proposal.attachments);
+                }
+                return proposal;
+            }));
+        });
+    },
+
     // Admin: Delete any proposal
     adminDeleteProposal: (req, res) => {
         const proposalId = req.params.id;
