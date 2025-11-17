@@ -17,7 +17,14 @@ router.delete("/:id", authenticateToken, authorizeRoles(['client']), tenderContr
 
 
 // --- Vendor Endpoints (Requires 'vendor' role) ---
+
+// Vendor: Show all tenders in descending order (Active Tenders Feed)
+router.get("/", authenticateToken, authorizeRoles(['vendor']), tenderController.getAllActiveTendersVendor); 
+
+// Vendor/Admin: Search tenders (Vendor implicitly searches active tenders)
 router.get("/search", authenticateToken, authorizeRoles(['vendor', 'admin']), tenderController.searchTenders);
+
+// Vendor/Client/Admin: Get details of a single tender (Vendor authorization is strictly checked in controller)
 router.get("/:id", authenticateToken, authorizeRoles(['client', 'vendor', 'admin']), tenderController.getTenderDetails);
 
 

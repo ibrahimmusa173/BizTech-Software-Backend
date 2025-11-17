@@ -22,6 +22,16 @@ const Tender = {
         db.query(sql, [client_id], callback);
     },
     
+    // NEW: Function to get all active tenders for vendors (descending order)
+    findAllActive: (callback) => {
+        const sql = `SELECT t.*, u.name as client_name, u.company_name as client_company
+                     FROM tenders t
+                     JOIN users u ON t.client_id = u.id
+                     WHERE t.status = 'active'
+                     ORDER BY t.created_at DESC`; // Descending order by creation date
+        db.query(sql, callback);
+    },
+
     // REQUIRED: Used in deleteTender controller
     delete: (id, callback) => {
         const sql = 'DELETE FROM tenders WHERE id = ?';
@@ -97,7 +107,8 @@ const Tender = {
             sql += ` AND (t.budget_range LIKE ? OR t.budget_range = 'Negotiable')`; 
             values.push(`%${filters.max_budget}%`);
         }
-        if (filters.status) {
+        // Status filter is applied here, which is critical for the searchController logic
+        if (filters.status) { 
             sql += ` AND t.status = ?`;
             values.push(filters.status);
         } 
