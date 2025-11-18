@@ -1,47 +1,38 @@
-// app.js
 const express = require('express');
+const bodyParser = require('body-parser');
 const cors = require('cors');
-// These paths assume itemRoutes.js and authRoutes.js are inside a 'routes' folder 
-// which is a sibling directory to app.js (i.e., both inside 'backend').
-const itemRoutes = require('./routes/itemRoutes'); 
-const authRoutes = require('./routes/authRoutes'); 
-const proposalRoutes = require('./routes/proposalRoutes'); // NEW: Import proposal routes
-const dotenv = require('dotenv'); 
-const path = require('path'); 
-const fs = require('fs'); 
+const dotenv = require('dotenv');
 
-dotenv.config(); // Load .env file
+dotenv.config();
+
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const tenderRoutes = require('./routes/tenderRoutes');
+const proposalRoutes = require('./routes/proposalRoutes');
+const notificationRoutes = require('./routes/notificationRoutes'); 
+const adminRoutes = require('./routes/adminRoutes'); // NEW: For Content Management & Analytics
 
 const app = express();
-const port = 7000;
-
-// --- Setup Upload Directory (Crucial for proposal file uploads) ---
-// This path ensures 'uploads/proposals' directory exists inside the 'backend' folder
-const uploadDir = path.join(__dirname, 'uploads/proposals');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+const port = process.env.PORT || 7000;
 
 // Middleware
-// Use Express built-in parsers (replaces body-parser)
-app.use(express.json()); 
-app.use(express.urlencoded({ extended: true })); 
+app.use(bodyParser.json());
 app.use(cors());
 
-// --- Static File Serving ---
-// Allow access to uploaded files 
-app.use('/uploads/proposals', express.static(uploadDir)); 
-
+// Serve static files (e.g., for attachments)
+app.use('/uploads', express.static('uploads'));
 
 // API Routes
-app.use('/api/auth', authRoutes); 
-app.use('/api', itemRoutes); 
-app.use('/api/proposals', proposalRoutes); // NEW Proposal Routes integration
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/tenders', tenderRoutes);
+app.use('/api/proposals', proposalRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes); // NEW Admin Routes for Content & Analytics
 
-
-// Simple root route 
+// Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
-    res.send('Server is running and ready for API requests!');
+    res.send('Tender Management System API is running!');
 });
 
 // Start the server
