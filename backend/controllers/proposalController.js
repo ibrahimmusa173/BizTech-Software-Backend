@@ -118,6 +118,68 @@ const proposalController = {
             });
         });
     },
+    
+    // --- NEW: Get details for a single proposal (Accessible by Client, Vendor, Admin) ---
+    getProposalDetail: (req, res) => {
+        const proposalId = req.params.id;
+        const currentUserId = req.user.id;
+        const currentUserType = req.user.user_type;
+
+        Proposal.getById(proposalId, (err, proposals) => {
+            if (err) {
+                console.error('Error fetching proposal details:', err);
+                return res.status(500).send({ message: "Server error." });
+            }
+            if (proposals.length === 0) {
+                return res.status(404).send({ message: "Proposal not found." });
+            }
+
+            const proposal = proposals[0];
+
+            // 1. Admin is always authorized
+            if (currentUserType === 'admin') {
+                if (proposal.attachments) {
+                    proposal.attachments = JSON.parse(proposal.attachments);
+                }
+                return res.status(200).send(proposal);
+            }
+            
+            // 2. Vendor check
+            if (currentUserType === 'vendor') {
+                if (proposal.vendor_id === currentUserId) {
+                    if (proposal.attachments) {
+                        proposal.attachments = JSON.parse(proposal.attachments);
+                    }
+                    return res.status(200).send(proposal);
+                }
+                return res.status(403).send({ message: "Forbidden: Vendors can only view their own proposals." });
+            }
+            
+            // 3. Client check (requires async tender lookup)
+            if (currentUserType === 'client') {
+                Tender.getById(proposal.tender_id, (tenderErr, tenders) => {
+                    if (tenderErr) {
+                        console.error('Error verifying tender ownership:', tenderErr);
+                        return res.status(500).send({ message: "Server error during authorization check." });
+                    }
+                    if (tenders.length === 0 || tenders[0].client_id !== currentUserId) {
+                        return res.status(403).send({ message: "Forbidden: You do not own the tender associated with this proposal." });
+                    }
+                    
+                    // Client is authorized
+                    if (proposal.attachments) {
+                        proposal.attachments = JSON.parse(proposal.attachments);
+                    }
+                    res.status(200).send(proposal);
+                });
+                return; // Prevent further execution until the tender lookup completes
+            }
+
+            // Fallback for unauthorized roles
+            return res.status(403).send({ message: "Unauthorized role to view proposal details." });
+        });
+    },
+
 
     // Vendor: Get all proposals submitted by the authenticated vendor
     getVendorProposals: (req, res) => {
@@ -136,18 +198,22 @@ const proposalController = {
         });
     },
 
-    // Client/Admin: Update proposal status (accept/reject)
+    // Client/Admin/Vendor: Update proposal status (Accept/Reject/Shortlist/Withdraw)
     updateProposalStatus: (req, res) => {
         const proposalId = req.params.id;
-        const { status } = req.body; // Expected status: 'accepted', 'rejected'
+        const { status } = req.body; 
         const currentUserId = req.user.id;
         const currentUserType = req.user.user_type;
 
-        if (!status || !['accepted', 'rejected','shortlisted'].includes(status)) {
-            return res.status(400).send({ message: "Invalid status provided. Must be 'accepted' or 'rejected' or 'shortlisted'." });
+        // 1. Initial Status Validation (Includes 'withdrawn')
+        const VALID_STATUSES = ['accepted', 'rejected', 'shortlisted', 'withdrawn'];
+        if (!status || !VALID_STATUSES.includes(status)) {
+            return res.status(400).send({ 
+                message: `Invalid status provided. Must be one of: ${VALID_STATUSES.join(', ')}.` 
+            });
         }
 
-        // Verify authorization: Only the client who owns the tender or an admin can change proposal status
+        // 2. Fetch Proposal and Tender Details
         Proposal.getById(proposalId, (err, proposals) => {
             if (err) {
                 console.error('Error fetching proposal for status update:', err);
@@ -167,11 +233,38 @@ const proposalController = {
                     return res.status(404).send({ message: "Associated tender not found." });
                 }
                 const tender = tenders[0];
-
-                if (tender.client_id !== currentUserId && currentUserType !== 'admin') {
-                    return res.status(403).send({ message: "You are not authorized to update this proposal's status." });
+                
+                // 3. Role-Based Authorization Logic
+                
+                if (currentUserType === 'vendor') {
+                    // R8: Vendor Withdrawal Check
+                    if (proposal.vendor_id !== currentUserId) {
+                        return res.status(403).send({ message: "Forbidden: Vendors can only update the status of their own submitted proposals." });
+                    }
+                    if (status !== 'withdrawn') {
+                        return res.status(403).send({ message: "Forbidden: Vendors are only permitted to change the status to 'withdrawn'." });
+                    }
+                    // Optional: Check deadline here if tender model provides deadline info
+                
+                } else if (currentUserType === 'client') {
+                    // R3/R4: Client Evaluation Check
+                    if (tender.client_id !== currentUserId) {
+                        return res.status(403).send({ message: "Forbidden: You are not authorized to update proposals for this tender." });
+                    }
+                    // Clients cannot use 'withdrawn' status
+                    if (status === 'withdrawn') {
+                         return res.status(400).send({ message: "Bad Request: Clients cannot use the 'withdrawn' status." });
+                    }
+                
+                } else if (currentUserType !== 'admin') {
+                    // This handles any roles other than client, vendor, or admin 
+                    // attempting to use this endpoint inappropriately.
+                    return res.status(403).send({ message: "Unauthorized role for this operation." });
                 }
+                // If Admin, checks were bypassed/implied successful.
 
+
+                // 4. Update the Proposal Status
                 Proposal.update(proposalId, { status }, (err, result) => {
                     if (err) {
                         console.error('Error updating proposal status:', err);
@@ -182,24 +275,26 @@ const proposalController = {
                     }
 
                        
-                     // --- NEW: Notify Vendor of Proposal Status Update ---
-                let statusMessage;
-                if (status === 'shortlisted') {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been shortlisted!`;
-                } else if (status === 'accepted') {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been accepted (Awarded)!`;
-                } else {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been rejected.`;
-                }
-                
-                Notification.create({
-                    user_id: proposal.vendor_id,
-                    type: `proposal_status_${status}`,
-                    message: statusMessage,
-                    reference_id: proposalId
-                }, (notifErr) => {
-                    if (notifErr) console.warn('Failed to create vendor status notification:', notifErr);
-                });
+                    // 5. Notify Vendor of Proposal Status Update
+                    let statusMessage;
+                    if (status === 'shortlisted') {
+                        statusMessage = `Your proposal for tender "${tender.title}" has been shortlisted!`;
+                    } else if (status === 'accepted') {
+                        statusMessage = `Your proposal for tender "${tender.title}" has been accepted (Awarded)!`;
+                    } else if (status === 'withdrawn') {
+                        statusMessage = `You successfully withdrew your proposal for tender "${tender.title}".`;
+                    } else {
+                        statusMessage = `Your proposal for tender "${tender.title}" has been rejected.`;
+                    }
+                    
+                    Notification.create({
+                        user_id: proposal.vendor_id,
+                        type: `proposal_status_${status}`,
+                        message: statusMessage,
+                        reference_id: proposalId
+                    }, (notifErr) => {
+                        if (notifErr) console.warn('Failed to create vendor status notification:', notifErr);
+                    });
 
 
                     res.status(200).send({ message: `Proposal status updated to ${status} successfully!` });
@@ -208,7 +303,7 @@ const proposalController = {
         });
     },
 
-    // --- NEW ADMIN FUNCTION ---
+    // --- ADMIN FUNCTION ---
     
     // Admin: View all proposals submitted on the platform
     getAllProposalsAdmin: (req, res) => {

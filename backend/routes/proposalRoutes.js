@@ -4,6 +4,13 @@ const { authenticateToken, authorizeRoles } = require('../middleware/authMiddlew
 
 const router = express.Router();
 
+
+router.get(
+    "/:id", 
+    authenticateToken, 
+    authorizeRoles(['client', 'admin', 'vendor']), 
+    proposalController.getProposalDetail // <<< NEW CONTROLLER FUNCTION
+);
 // --- Vendor Endpoints (Requires 'vendor' role) ---
 router.post(
     "/", 
@@ -15,7 +22,12 @@ router.get("/my-proposals", authenticateToken, authorizeRoles(['vendor']), propo
 
 // --- Client Endpoints (Requires 'client' role) ---
 router.get("/tender/:tenderId", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.getProposalsForTender);
-router.patch("/:id/status", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.updateProposalStatus);
+router.patch(
+    "/:id/status", 
+    authenticateToken, 
+    authorizeRoles(['client', 'admin', 'vendor']), // <<< ADDED 'vendor' HERE
+    proposalController.updateProposalStatus
+);
 
 
 // --- Admin Endpoints (Requires 'admin' role) ---
