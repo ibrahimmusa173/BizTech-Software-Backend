@@ -1,34 +1,48 @@
+// backend/middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
-const db = require('../config/db'); // Using db to fetch user for role check
 
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+const protect = (req, res, next) => {
+    let token;
 
-    if (!token) {
-        return res.status(401).send({ message: "Access Denied: No token provided." });
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            // Get token from header (Format: Bearer <token>)
+            token = req.headers.authorization.split(' ')[1];
+
+            // Verify token
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey');
+
+            // Attach user data to request object
+            // Ensure we use the same field names as generated in authController.js (id, email, user_type)
+            req.user = decoded; 
+            
+            next();
+        } catch (error) {
+            console.error('JWT verification failed:', error);
+            res.status(401).send({ message: 'Not authorized, token failed' });
+        }
     }
 
-    jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
-        if (err) {
-            console.error("JWT Verification Error:", err.message);
-            return res.status(403).send({ message: "Access Denied: Invalid token." });
-        }
-        req.user = user; // Attach user payload (id, email, user_type) to the request
-        next();
-    });
+    if (!token) {
+        res.status(401).send({ message: 'Not authorized, no token' });
+    }
 };
 
-const authorizeRoles = (roles) => {
-    return (req, res, next) => {
-        if (!req.user || !req.user.user_type) {
-            return res.status(403).send({ message: "Access Denied: User role not found." });
-        }
-        if (!roles.includes(req.user.user_type)) {
-            return res.status(403).send({ message: `Access Denied: You must be one of the following roles: ${roles.join(', ')}.` });
-        }
+const admin = (req, res, next) => {
+    if (req.user && req.user.user_type === 'admin') {
         next();
-    };
+    } else {
+        res.status(403).send({ message: 'Not authorized as an admin' });
+    }
 };
 
-module.exports = { authenticateToken, authorizeRoles };
+// Middleware to restrict access based on user types
+const restrictTo = (userTypes) => (req, res, next) => {
+    if (!req.user || !userTypes.includes(req.user.user_type)) {
+        return res.status(403).send({ message: 'Access denied for this user type.' });
+    }
+    next();
+};
+
+
+module.exports = { protect, admin, restrictTo };

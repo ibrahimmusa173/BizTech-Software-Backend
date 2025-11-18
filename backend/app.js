@@ -1,38 +1,47 @@
+// app.js
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
-const dotenv = require('dotenv');
+// These paths assume itemRoutes.js and authRoutes.js are inside a 'routes' folder 
+// which is a sibling directory to app.js (i.e., both inside 'backend').
+const itemRoutes = require('./routes/itemRoutes'); 
+const authRoutes = require('./routes/authRoutes'); 
+const proposalRoutes = require('./routes/proposalRoutes'); // NEW: Import proposal routes
+const dotenv = require('dotenv'); 
+const path = require('path'); 
+const fs = require('fs'); 
 
-dotenv.config();
-
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-const tenderRoutes = require('./routes/tenderRoutes');
-const proposalRoutes = require('./routes/proposalRoutes');
-const notificationRoutes = require('./routes/notificationRoutes'); 
-const adminRoutes = require('./routes/adminRoutes'); // NEW: For Content Management & Analytics
+dotenv.config(); // Load .env file
 
 const app = express();
-const port = process.env.PORT || 7000;
+const port = 7000;
+
+// --- Setup Upload Directory (Crucial for proposal file uploads) ---
+// This path ensures 'uploads/proposals' directory exists inside the 'backend' folder
+const uploadDir = path.join(__dirname, 'uploads/proposals');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Middleware
-app.use(bodyParser.json());
+// Use Express built-in parsers (replaces body-parser)
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
 app.use(cors());
 
-// Serve static files (e.g., for attachments)
-app.use('/uploads', express.static('uploads'));
+// --- Static File Serving ---
+// Allow access to uploaded files 
+app.use('/uploads/proposals', express.static(uploadDir)); 
+
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/tenders', tenderRoutes);
-app.use('/api/proposals', proposalRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes); // NEW Admin Routes for Content & Analytics
+app.use('/api/auth', authRoutes); 
+app.use('/api', itemRoutes); 
+app.use('/api/proposals', proposalRoutes); // NEW Proposal Routes integration
 
-// Simple root route (optional, for testing if server is running)
+
+// Simple root route 
 app.get('/', (req, res) => {
-    res.send('Tender Management System API is running!');
+    res.send('Server is running and ready for API requests!');
 });
 
 // Start the server

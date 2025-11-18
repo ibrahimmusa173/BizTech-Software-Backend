@@ -1,68 +1,91 @@
-const db = require('../config/db');
+// backend/models/Proposal.js
+const db = require('../config/db'); 
 
 const Proposal = {
+    // Req 1: Submit Proposal
     create: (proposalData, callback) => {
-        const { tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status } = proposalData;
-        const sql = `INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        db.query(sql, [tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status], callback);
+        const { tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments } = proposalData;
+        const status = 'submitted'; // Default status upon submission
+
+        const sql = "INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        
+        // Ensure attachments is stored as a JSON string
+        const attachmentsJson = JSON.stringify(attachments || []);
+
+        db.query(sql, [tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachmentsJson, status], callback);
     },
 
-    getById: (id, callback) => {
-        db.query("SELECT * FROM proposals WHERE id = ?", [id], callback);
-    },
-    
-    // NEW: Get all proposals for Admin view
-    getAll: (callback) => {
-        const sql = `SELECT p.*, t.title as tender_title, u.name as vendor_name, u.company_name as vendor_company
-                     FROM proposals p
-                     JOIN tenders t ON p.tender_id = t.id
-                     JOIN users u ON p.vendor_id = u.id
-                     ORDER BY p.created_at DESC`;
-        db.query(sql, callback);
-    },
-
-    // Get all proposals for a specific tender (for client/admin to view)
-    findByTenderId: (tenderId, callback) => {
-        const sql = `SELECT p.*, u.name as vendor_name, u.company_name as vendor_company, u.email as vendor_email
-                     FROM proposals p
-                     JOIN users u ON p.vendor_id = u.id
-                     WHERE p.tender_id = ?`;
-        db.query(sql, [tenderId], callback);
-    },
-
-    // Get all proposals submitted by a specific vendor
-    findByVendorId: (vendorId, callback) => {
-        const sql = `SELECT p.*, t.title as tender_title, t.description as tender_description, t.client_id
-                     FROM proposals p
-                     JOIN tenders t ON p.tender_id = t.id
-                     WHERE p.vendor_id = ?`;
+    // Req 2: Get My Proposals (Vendor Dashboard)
+    getByVendor: (vendorId, callback) => {
+        // SELECT relevant details for the dashboard view
+        const sql = `
+            SELECT 
+                p.id AS proposal_id, 
+                p.status, 
+                p.pricing, 
+                p.cover_letter,
+                p.tender_id,
+                t.title AS tender_title 
+            FROM proposals p
+            LEFT JOIN tenders t ON p.tender_id = t.id
+            WHERE p.vendor_id = ?
+        `;
         db.query(sql, [vendorId], callback);
     },
 
-    update: (id, proposalData, callback) => {
-        const fields = [];
-        const values = [];
-
-        for (const key in proposalData) {
-            if (proposalData.hasOwnProperty(key) && proposalData[key] !== undefined) {
-                fields.push(`${key} = ?`);
-                values.push(proposalData[key]);
-            }
-        }
-
-        if (fields.length === 0) {
-            return callback(null, { affectedRows: 0 }); // No fields to update
-        }
-
-        const sql = `UPDATE proposals SET ${fields.join(', ')} WHERE id = ?`;
-        values.push(id);
-        db.query(sql, values, callback);
+    // Req 5: Get Proposals by Tender (Client/Admin View)
+    getByTender: (tenderId, callback) => {
+         const sql = `
+            SELECT 
+                p.id, 
+                p.status, 
+                p.pricing, 
+                p.cover_letter,
+                p.proposed_solution,
+                p.attachments,
+                p.vendor_id,
+                u.company_name AS vendor_company_name,
+                p.createdAt
+            FROM proposals p
+            LEFT JOIN users u ON p.vendor_id = u.id
+            WHERE p.tender_id = ?
+        `;
+        db.query(sql, [tenderId], callback);
     },
 
-    delete: (id, callback) => {
+    // Req 4/7: Get Single Proposal Detail
+    getById: (proposalId, callback) => {
+        const sql = "SELECT * FROM proposals WHERE id = ?";
+        db.query(sql, [proposalId], callback);
+    },
+
+    // Req 3/6/10: Update Proposal Status
+    updateStatus: (proposalId, newStatus, callback) => {
+        const sql = "UPDATE proposals SET status = ?, updatedAt = NOW() WHERE id = ?";
+        db.query(sql, [newStatus, proposalId], callback);
+    },
+
+    // Req 8: Get All Proposals (Admin View)
+    getAllAdmin: (callback) => {
+        const sql = `
+            SELECT 
+                p.id AS proposal_id, 
+                p.status, 
+                p.pricing, 
+                p.vendor_id,
+                t.title AS tenderTitle,
+                p.createdAt
+            FROM proposals p
+            LEFT JOIN tenders t ON p.tender_id = t.id
+            ORDER BY p.createdAt DESC
+        `;
+        db.query(sql, callback);
+    },
+
+    // Req 9: Delete Proposal (Admin)
+    delete: (proposalId, callback) => {
         const sql = "DELETE FROM proposals WHERE id = ?";
-        db.query(sql, [id], callback);
+        db.query(sql, [proposalId], callback);
     }
 };
 
