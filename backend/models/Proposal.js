@@ -3,8 +3,8 @@ const db = require('../config/db');
 const Proposal = {
     create: (proposalData, callback) => {
         const { tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status } = proposalData;
-        const sql = `INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        const sql = `INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`;
         db.query(sql, [tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status], callback);
     },
 
@@ -12,7 +12,7 @@ const Proposal = {
         db.query("SELECT * FROM proposals WHERE id = ?", [id], callback);
     },
     
-    // NEW: Get all proposals for Admin view
+    // Admin: Get all proposals for oversight
     getAll: (callback) => {
         const sql = `SELECT p.*, t.title as tender_title, u.name as vendor_name, u.company_name as vendor_company
                      FROM proposals p
@@ -22,7 +22,7 @@ const Proposal = {
         db.query(sql, callback);
     },
 
-    // Get all proposals for a specific tender (for client/admin to view)
+    // Client/Admin: Get all proposals for a specific tender
     findByTenderId: (tenderId, callback) => {
         const sql = `SELECT p.*, u.name as vendor_name, u.company_name as vendor_company, u.email as vendor_email
                      FROM proposals p
@@ -31,12 +31,13 @@ const Proposal = {
         db.query(sql, [tenderId], callback);
     },
 
-    // Get all proposals submitted by a specific vendor
+    // Vendor: Get all proposals submitted by a specific vendor
     findByVendorId: (vendorId, callback) => {
         const sql = `SELECT p.*, t.title as tender_title, t.description as tender_description, t.client_id
                      FROM proposals p
                      JOIN tenders t ON p.tender_id = t.id
-                     WHERE p.vendor_id = ?`;
+                     WHERE p.vendor_id = ?
+                     ORDER BY p.created_at DESC`;
         db.query(sql, [vendorId], callback);
     },
 
@@ -52,7 +53,7 @@ const Proposal = {
         }
 
         if (fields.length === 0) {
-            return callback(null, { affectedRows: 0 }); // No fields to update
+            return callback(null, { affectedRows: 0 }); 
         }
 
         const sql = `UPDATE proposals SET ${fields.join(', ')} WHERE id = ?`;

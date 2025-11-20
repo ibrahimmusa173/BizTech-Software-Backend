@@ -10,7 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const tenderRoutes = require('./routes/tenderRoutes');
 const proposalRoutes = require('./routes/proposalRoutes');
 const notificationRoutes = require('./routes/notificationRoutes'); 
-const adminRoutes = require('./routes/adminRoutes'); // NEW: For Content Management & Analytics
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const port = process.env.PORT || 7000;
@@ -28,7 +28,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tenders', tenderRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes); // NEW Admin Routes for Content & Analytics
+app.use('/api/admin', adminRoutes);
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
