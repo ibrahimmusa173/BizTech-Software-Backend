@@ -1,38 +1,38 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const itemRoutes = require('./routes/itemRoutes'); // Keep existing item routes
-const authRoutes = require('./routes/authRoutes'); // Keep existing auth routes
-const userRoutes = require('./routes/userRoutes');       // <-- NEW
-const tenderRoutes = require('./routes/tenderRoutes');   // <-- NEW
-const proposalRoutes = require('./routes/proposalRoutes');// <-- NEW
-const adminRoutes = require('./routes/adminRoutes');     // <-- NEW
-// NOTE: notificationRoutes should also be imported if needed
+const dotenv = require('dotenv');
 
-const dotenv = require('dotenv'); // To load environment variables
+dotenv.config();
 
-dotenv.config(); // Load .env file
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const tenderRoutes = require('./routes/tenderRoutes');
+const proposalRoutes = require('./routes/proposalRoutes');
+const notificationRoutes = require('./routes/notificationRoutes'); 
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
-const port = 7000;
+const port = process.env.PORT || 7000;
 
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
 
-// API Routes
-app.use('/api', itemRoutes); // Existing route
-app.use('/api/auth', authRoutes); // Existing route
+// Serve static files (e.g., for attachments)
+app.use('/uploads', express.static('uploads'));
 
-// Registering new routes based on the file structure:
+// API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tenders', tenderRoutes);
 app.use('/api/proposals', proposalRoutes);
-app.use('/api/admin', adminRoutes); 
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
-    res.send('Server is running and ready for API requests!');
+    res.send('Tender Management System API is running!');
 });
 
 // Start the server
