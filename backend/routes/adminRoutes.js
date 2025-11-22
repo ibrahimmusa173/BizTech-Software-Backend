@@ -1,36 +1,31 @@
+// routes/adminRoutes.js
+const express = require('express');
+const adminController = require('../controllers/adminController');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 
-const User = require('../models/User');
-const Item = require('../models/Item'); // Items represent Tenders
+const router = express.Router();
 
-const adminController = {
-    getPlatformReports: (req, res) => {
-        const reports = {};
+// Apply Auth and Admin role check to all routes in this file
+router.use(authenticateToken, authorizeRoles(['admin']));
 
-        // 1. Get Active Users (Total Registered Users)
-        User.countAll((err, userResult) => {
-            if (err) {
-                console.error('Error fetching user count:', err);
-                return res.status(500).send({ message: "Error fetching user data." });
-            }
-            // userResult is an array of rows, we need the first element
-            reports.activeUsers = userResult[0].totalUsers || 0;
+// --- Content Management ---
 
-            // 2. Get Tenders Posted (Total Items)
-            Item.countAll((err, tenderResult) => {
-                if (err) {
-                    console.error('Error fetching tender count:', err);
-                    return res.status(500).send({ message: "Error fetching tender data." });
-                }
-                reports.tendersPosted = tenderResult[0].totalTenders || 0;
+// Guidelines Management (e.g., for writing tender requests)
+router.post('/content/guidelines', adminController.createGuideline);
+router.put('/content/guidelines/:id', adminController.updateGuideline);
+router.delete('/content/guidelines/:id', adminController.deleteGuideline);
 
-                // 3. Placeholder for Proposals Submitted (Requires a separate Bid/Proposal Model)
-                reports.proposalsSubmitted = 0; 
+// Category, Industry, and Taxonomy Management
+router.post('/taxonomy', adminController.createTaxonomyItem);
+router.put('/taxonomy/:id', adminController.updateTaxonomyItem);
+router.delete('/taxonomy/:id', adminController.deleteTaxonomyItem);
+router.get('/taxonomy', adminController.listTaxonomy); // List all current taxonomies
 
-                // Send the consolidated report
-                res.status(200).send(reports);
-            });
-        });
-    }
-};
 
-module.exports = adminController;
+// --- Analytics and Reporting ---
+router.get('/analytics/dashboard', adminController.getDashboardStats);
+router.get('/analytics/user-report', adminController.getUserReport);
+router.get('/analytics/tender-report', adminController.getTenderReport);
+
+
+module.exports = router;

@@ -1,29 +1,38 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const itemRoutes = require('./routes/itemRoutes'); // Correct path based on structure
-const authRoutes = require('./routes/authRoutes'); // Import auth routes
-const adminRoutes = require('./routes/adminRoutes'); // ADDED: Import admin routes
-const dotenv = require('dotenv'); // To load environment variables
+const dotenv = require('dotenv');
 
-dotenv.config(); // Load .env file
+dotenv.config();
+
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const tenderRoutes = require('./routes/tenderRoutes');
+const proposalRoutes = require('./routes/proposalRoutes');
+const notificationRoutes = require('./routes/notificationRoutes'); 
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
-const port = 7000;
+const port = process.env.PORT || 7000;
 
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
 
+// Serve static files (e.g., for attachments)
+app.use('/uploads', express.static('uploads'));
+
 // API Routes
-app.use('/api', itemRoutes);
-app.use('/api/auth', authRoutes); // All authentication routes under /api/auth
-app.use('/api/admin', adminRoutes); // ADDED: All admin routes under /api/admin
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/tenders', tenderRoutes);
+app.use('/api/proposals', proposalRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
-    res.send('Server is running and ready for API requests!');
+    res.send('Tender Management System API is running!');
 });
 
 // Start the server

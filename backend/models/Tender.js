@@ -57,22 +57,6 @@ const Tender = {
                      ORDER BY created_at DESC`;
         db.query(sql, callback);
     },
-
-    /**
-     * NEW: Find active tenders approaching deadline (for scheduled notifications)
-     * Finds tenders where the deadline is within X days but hasn't passed yet.
-     */
-    findExpiringTenders: (daysAhead, callback) => {
-        const sql = `
-            SELECT id, client_id, title, deadline 
-            FROM tenders 
-            WHERE status = 'active' 
-            AND deadline IS NOT NULL
-            AND DATEDIFF(deadline, CURDATE()) <= ? 
-            AND DATEDIFF(deadline, CURDATE()) > 0 
-            ORDER BY deadline ASC`;
-        db.query(sql, [daysAhead], callback);
-    },
     
     // Existing search function
     search: (filters, callback) => {
