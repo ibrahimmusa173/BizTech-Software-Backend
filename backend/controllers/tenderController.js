@@ -1,5 +1,6 @@
 // controllers/tenderController.js
 const Tender = require('../models/Tender');
+const Notification = require('../models/Notification'); // NEWLY REQUIRED
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
@@ -9,7 +10,7 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = 'uploads/tenders';
         // Create directory if it doesn't exist
-        fs.mkdirSync(uploadDir, { recursive: true });
+        fs.mkdirSync(path.join(__dirname, '..', uploadDir), { recursive: true }); // Use path.join for robustness
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
@@ -312,6 +313,39 @@ const tenderController = {
             });
         });
     },
+    
+    /**
+     * UTILITY (Requirement 2): Checks for tenders approaching deadline and creates notifications.
+     * This function is intended to be called by a scheduled external worker (cron job).
+     * @param {number} daysAhead - how many days out to check (e.g., 7 days)
+     */
+    checkExpiringTenders: (daysAhead = 7) => {
+        Tender.findExpiringTenders(daysAhead, (err, tenders) => {
+            if (err) {
+                return console.error('Error checking expiring tenders:', err);
+            }
+            
+            tenders.forEach(tender => {
+                // Calculate days remaining precisely
+                const daysRemaining = Math.max(0, Math.floor((new Date(tender.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) + 1);
+                
+                const message = `ACTION REQUIRED: Your tender "${tender.title}" is closing in ${daysRemaining} day(s) (Deadline: ${new Date(tender.deadline).toLocaleDateString()}).`;
+                
+                Notification.create({
+                    user_id: tender.client_id,
+                    type: 'deadline_warning',
+                    message: message,
+                    reference_id: tender.id
+                }, (notifErr) => {
+                    if (notifErr) console.warn(`Failed to notify client ${tender.client_id} about deadline:`, notifErr);
+                });
+            });
+            if (tenders.length > 0) {
+                 console.log(`[Scheduler] Processed ${tenders.length} tenders approaching deadline (${daysAhead} days).`);
+            }
+        });
+    },
+
     // -----------------------------------------------------
 
     // --- Vendor/Admin Functions (Re-inserted Original Logic & Modifications) ---

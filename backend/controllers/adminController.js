@@ -1,78 +1,35 @@
-// controllers/adminController.js
-const db = require('../config/db'); // Assuming the ability to access the database directly for complex reports
+
+const User = require('../models/User');
+const Item = require('../models/Item'); // Items represent Tenders
 
 const adminController = {
+    getPlatformReports: (req, res) => {
+        const reports = {};
 
-    // --- Content Management Functions (Stubs require underlying Models) ---
-
-    // Create/Edit/Delete Guidelines
-    createGuideline: (req, res) => {
-        // Implementation: Insert new guideline/FAQ content into a dedicated table
-        res.status(201).send({ message: "Guideline created successfully (Requires Content Model)." });
-    },
-    updateGuideline: (req, res) => {
-        // Implementation: Update existing guideline content
-        res.status(200).send({ message: `Guideline ${req.params.id} updated successfully (Requires Content Model).` });
-    },
-    deleteGuideline: (req, res) => {
-        // Implementation: Delete guideline content
-        res.status(200).send({ message: `Guideline ${req.params.id} deleted successfully (Requires Content Model).` });
-    },
-
-    // Manage Categories/Taxonomies
-    createTaxonomyItem: (req, res) => {
-        // Implementation: Insert new category/industry into a taxonomy table
-        res.status(201).send({ message: "Taxonomy item created (Requires Taxonomy Model)." });
-    },
-    updateTaxonomyItem: (req, res) => {
-        // Implementation: Update taxonomy item
-        res.status(200).send({ message: `Taxonomy item ${req.params.id} updated (Requires Taxonomy Model).` });
-    },
-    deleteTaxonomyItem: (req, res) => {
-        // Implementation: Delete taxonomy item
-        res.status(200).send({ message: `Taxonomy item ${req.params.id} deleted (Requires Taxonomy Model).` });
-    },
-    listTaxonomy: (req, res) => {
-        // Implementation: Fetch all active categories/industries
-        res.status(200).send({ message: "List of taxonomies retrieved (Requires Taxonomy Model)." });
-    },
-
-
-    // --- Analytics and Reporting Functions ---
-
-    getDashboardStats: (req, res) => {
-        // Provides platform usage dashboards (e.g., active users, tenders posted, proposals submitted)
-        const statsQuery = `
-            SELECT 
-                (SELECT COUNT(id) FROM users WHERE status='active') AS total_active_users,
-                (SELECT COUNT(id) FROM users WHERE user_type='client' AND status='active') AS active_clients,
-                (SELECT COUNT(id) FROM users WHERE user_type='vendor' AND status='active') AS active_vendors,
-                (SELECT COUNT(id) FROM tenders) AS total_tenders_posted,
-                (SELECT COUNT(id) FROM tenders WHERE status='active') AS tenders_currently_active,
-                (SELECT COUNT(id) FROM proposals) AS total_proposals_submitted;
-        `;
-
-        db.query(statsQuery, (err, results) => {
+        // 1. Get Active Users (Total Registered Users)
+        User.countAll((err, userResult) => {
             if (err) {
-                console.error('Error fetching dashboard stats:', err);
-                return res.status(500).send({ message: "Error fetching analytics data." });
+                console.error('Error fetching user count:', err);
+                return res.status(500).send({ message: "Error fetching user data." });
             }
+            // userResult is an array of rows, we need the first element
+            reports.activeUsers = userResult[0].totalUsers || 0;
 
-            res.status(200).send({
-                message: "Dashboard statistics retrieved successfully.",
-                data: results[0]
+            // 2. Get Tenders Posted (Total Items)
+            Item.countAll((err, tenderResult) => {
+                if (err) {
+                    console.error('Error fetching tender count:', err);
+                    return res.status(500).send({ message: "Error fetching tender data." });
+                }
+                reports.tendersPosted = tenderResult[0].totalTenders || 0;
+
+                // 3. Placeholder for Proposals Submitted (Requires a separate Bid/Proposal Model)
+                reports.proposalsSubmitted = 0; 
+
+                // Send the consolidated report
+                res.status(200).send(reports);
             });
         });
-    },
-
-    getUserReport: (req, res) => {
-        // Placeholder for complex user reports (e.g., breakdown by activity, registration dates)
-        res.status(200).send({ message: "Detailed User Report generated (Stub for complex queries)." });
-    },
-    
-    getTenderReport: (req, res) => {
-        // Placeholder for complex tender reports (e.g., category distribution, proposal volume per tender)
-        res.status(200).send({ message: "Detailed Tender Report generated (Stub for complex queries)." });
     }
 };
 

@@ -1163,43 +1163,6 @@ const userController = {
 module.exports = userController;
 </file>
 
-<file path="backend/middleware/authMiddleware.js">
-const jwt = require('jsonwebtoken');
-const db = require('../config/db'); // Using db to fetch user for role check
-
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).send({ message: "Access Denied: No token provided." });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
-        if (err) {
-            console.error("JWT Verification Error:", err.message);
-            return res.status(403).send({ message: "Access Denied: Invalid token." });
-        }
-        req.user = user; // Attach user payload (id, email, user_type) to the request
-        next();
-    });
-};
-
-const authorizeRoles = (roles) => {
-    return (req, res, next) => {
-        if (!req.user || !req.user.user_type) {
-            return res.status(403).send({ message: "Access Denied: User role not found." });
-        }
-        if (!roles.includes(req.user.user_type)) {
-            return res.status(403).send({ message: `Access Denied: You must be one of the following roles: ${roles.join(', ')}.` });
-        }
-        next();
-    };
-};
-
-module.exports = { authenticateToken, authorizeRoles };
-</file>
-
 <file path="backend/models/Notification.js">
 const db = require('../config/db');
 
@@ -1253,21 +1216,6 @@ const Notification = {
 };
 
 module.exports = Notification;
-</file>
-
-<file path="backend/routes/authRoutes.js">
-// backend/routes/authRoutes.js
-const express = require('express');
-const authController = require('../controllers/authController');
-
-const router = express.Router();
-
-router.post("/register", authController.register);
-router.post("/login", authController.login);
-router.post("/forgot-password", authController.forgotPassword);
-router.post("/reset-password/:token", authController.resetPassword);
-
-module.exports = router;
 </file>
 
 <file path="backend/routes/userRoutes.js">
@@ -1480,81 +1428,62 @@ EMAIL_FROM=no-reply@yourdomain.com
 FRONTEND_URL=http://localhost:5173 # Ensure this matches your frontend's URL
 </file>
 
-<file path="backend/models/Proposal.js">
-const db = require('../config/db');
+<file path="backend/middleware/authMiddleware.js">
+const jwt = require('jsonwebtoken');
+const db = require('../config/db'); // Using db to fetch user for role check
 
-const Proposal = {
-    create: (proposalData, callback) => {
-        const { tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status } = proposalData;
-        const sql = `INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        db.query(sql, [tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status], callback);
-    },
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-    getById: (id, callback) => {
-        db.query("SELECT * FROM proposals WHERE id = ?", [id], callback);
-    },
-    
-    // NEW: Get all proposals for Admin view
-    getAll: (callback) => {
-        const sql = `SELECT p.*, t.title as tender_title, u.name as vendor_name, u.company_name as vendor_company
-                     FROM proposals p
-                     JOIN tenders t ON p.tender_id = t.id
-                     JOIN users u ON p.vendor_id = u.id
-                     ORDER BY p.created_at DESC`;
-        db.query(sql, callback);
-    },
-
-    // Get all proposals for a specific tender (for client/admin to view)
-    findByTenderId: (tenderId, callback) => {
-        const sql = `SELECT p.*, u.name as vendor_name, u.company_name as vendor_company, u.email as vendor_email
-                     FROM proposals p
-                     JOIN users u ON p.vendor_id = u.id
-                     WHERE p.tender_id = ?`;
-        db.query(sql, [tenderId], callback);
-    },
-
-    // Get all proposals submitted by a specific vendor
-    findByVendorId: (vendorId, callback) => {
-        const sql = `SELECT p.*, t.title as tender_title, t.description as tender_description, t.client_id
-                     FROM proposals p
-                     JOIN tenders t ON p.tender_id = t.id
-                     WHERE p.vendor_id = ?`;
-        db.query(sql, [vendorId], callback);
-    },
-
-    update: (id, proposalData, callback) => {
-        const fields = [];
-        const values = [];
-
-        for (const key in proposalData) {
-            if (proposalData.hasOwnProperty(key) && proposalData[key] !== undefined) {
-                fields.push(`${key} = ?`);
-                values.push(proposalData[key]);
-            }
-        }
-
-        if (fields.length === 0) {
-            return callback(null, { affectedRows: 0 }); // No fields to update
-        }
-
-        const sql = `UPDATE proposals SET ${fields.join(', ')} WHERE id = ?`;
-        values.push(id);
-        db.query(sql, values, callback);
-    },
-
-    delete: (id, callback) => {
-        const sql = "DELETE FROM proposals WHERE id = ?";
-        db.query(sql, [id], callback);
+    if (!token) {
+        return res.status(401).send({ message: "Access Denied: No token provided." });
     }
+
+    jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
+        if (err) {
+            console.error("JWT Verification Error:", err.message);
+            return res.status(403).send({ message: "Access Denied: Invalid token." });
+        }
+        req.user = user; // Attach user payload (id, email, user_type) to the request
+        next();
+    });
 };
 
-module.exports = Proposal;
+const authorizeRoles = (roles) => {
+    return (req, res, next) => {
+        if (!req.user || !req.user.user_type) {
+            return res.status(403).send({ message: "Access Denied: User role not found." });
+        }
+        if (!roles.includes(req.user.user_type)) {
+            return res.status(403).send({ message: `Access Denied: You must be one of the following roles: ${roles.join(', ')}.` });
+        }
+        next();
+    };
+};
+
+module.exports = { authenticateToken, authorizeRoles };
+</file>
+
+<file path="backend/routes/authRoutes.js">
+// backend/routes/authRoutes.js
+const express = require('express');
+const authController = require('../controllers/authController');
+
+const router = express.Router();
+
+router.post("/register", authController.register);
+router.post("/login", authController.login);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/reset-password/:token", authController.resetPassword);
+
+module.exports = router;
 </file>
 
 <file path="backend/controllers/tenderController.js">
 // controllers/tenderController.js
 const Tender = require('../models/Tender');
+const Notification = require('../models/Notification'); // NEWLY REQUIRED
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
@@ -1564,7 +1493,7 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = 'uploads/tenders';
         // Create directory if it doesn't exist
-        fs.mkdirSync(uploadDir, { recursive: true });
+        fs.mkdirSync(path.join(__dirname, '..', uploadDir), { recursive: true }); // Use path.join for robustness
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
@@ -1867,6 +1796,39 @@ const tenderController = {
             });
         });
     },
+    
+    /**
+     * UTILITY (Requirement 2): Checks for tenders approaching deadline and creates notifications.
+     * This function is intended to be called by a scheduled external worker (cron job).
+     * @param {number} daysAhead - how many days out to check (e.g., 7 days)
+     */
+    checkExpiringTenders: (daysAhead = 7) => {
+        Tender.findExpiringTenders(daysAhead, (err, tenders) => {
+            if (err) {
+                return console.error('Error checking expiring tenders:', err);
+            }
+            
+            tenders.forEach(tender => {
+                // Calculate days remaining precisely
+                const daysRemaining = Math.max(0, Math.floor((new Date(tender.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) + 1);
+                
+                const message = `ACTION REQUIRED: Your tender "${tender.title}" is closing in ${daysRemaining} day(s) (Deadline: ${new Date(tender.deadline).toLocaleDateString()}).`;
+                
+                Notification.create({
+                    user_id: tender.client_id,
+                    type: 'deadline_warning',
+                    message: message,
+                    reference_id: tender.id
+                }, (notifErr) => {
+                    if (notifErr) console.warn(`Failed to notify client ${tender.client_id} about deadline:`, notifErr);
+                });
+            });
+            if (tenders.length > 0) {
+                 console.log(`[Scheduler] Processed ${tenders.length} tenders approaching deadline (${daysAhead} days).`);
+            }
+        });
+    },
+
     // -----------------------------------------------------
 
     // --- Vendor/Admin Functions (Re-inserted Original Logic & Modifications) ---
@@ -2068,6 +2030,79 @@ const tenderController = {
 module.exports = tenderController;
 </file>
 
+<file path="backend/models/Proposal.js">
+const db = require('../config/db');
+
+const Proposal = {
+    create: (proposalData, callback) => {
+        const { tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status } = proposalData;
+        const sql = `INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`;
+        db.query(sql, [tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status], callback);
+    },
+
+    getById: (id, callback) => {
+        db.query("SELECT * FROM proposals WHERE id = ?", [id], callback);
+    },
+    
+    // Admin: Get all proposals for oversight
+    getAll: (callback) => {
+        const sql = `SELECT p.*, t.title as tender_title, u.name as vendor_name, u.company_name as vendor_company
+                     FROM proposals p
+                     JOIN tenders t ON p.tender_id = t.id
+                     JOIN users u ON p.vendor_id = u.id
+                     ORDER BY p.created_at DESC`;
+        db.query(sql, callback);
+    },
+
+    // Client/Admin: Get all proposals for a specific tender
+    findByTenderId: (tenderId, callback) => {
+        const sql = `SELECT p.*, u.name as vendor_name, u.company_name as vendor_company, u.email as vendor_email
+                     FROM proposals p
+                     JOIN users u ON p.vendor_id = u.id
+                     WHERE p.tender_id = ?`;
+        db.query(sql, [tenderId], callback);
+    },
+
+    // Vendor: Get all proposals submitted by a specific vendor
+    findByVendorId: (vendorId, callback) => {
+        const sql = `SELECT p.*, t.title as tender_title, t.description as tender_description, t.client_id
+                     FROM proposals p
+                     JOIN tenders t ON p.tender_id = t.id
+                     WHERE p.vendor_id = ?
+                     ORDER BY p.created_at DESC`;
+        db.query(sql, [vendorId], callback);
+    },
+
+    update: (id, proposalData, callback) => {
+        const fields = [];
+        const values = [];
+
+        for (const key in proposalData) {
+            if (proposalData.hasOwnProperty(key) && proposalData[key] !== undefined) {
+                fields.push(`${key} = ?`);
+                values.push(proposalData[key]);
+            }
+        }
+
+        if (fields.length === 0) {
+            return callback(null, { affectedRows: 0 }); 
+        }
+
+        const sql = `UPDATE proposals SET ${fields.join(', ')} WHERE id = ?`;
+        values.push(id);
+        db.query(sql, values, callback);
+    },
+
+    delete: (id, callback) => {
+        const sql = "DELETE FROM proposals WHERE id = ?";
+        db.query(sql, [id], callback);
+    }
+};
+
+module.exports = Proposal;
+</file>
+
 <file path="backend/models/Tender.js">
 // models/Tender.js
 const db = require('../config/db');
@@ -2128,6 +2163,22 @@ const Tender = {
                      ORDER BY created_at DESC`;
         db.query(sql, callback);
     },
+
+    /**
+     * NEW: Find active tenders approaching deadline (for scheduled notifications)
+     * Finds tenders where the deadline is within X days but hasn't passed yet.
+     */
+    findExpiringTenders: (daysAhead, callback) => {
+        const sql = `
+            SELECT id, client_id, title, deadline 
+            FROM tenders 
+            WHERE status = 'active' 
+            AND deadline IS NOT NULL
+            AND DATEDIFF(deadline, CURDATE()) <= ? 
+            AND DATEDIFF(deadline, CURDATE()) > 0 
+            ORDER BY deadline ASC`;
+        db.query(sql, [daysAhead], callback);
+    },
     
     // Existing search function
     search: (filters, callback) => {
@@ -2184,38 +2235,6 @@ const Tender = {
 module.exports = Tender;
 </file>
 
-<file path="backend/routes/proposalRoutes.js">
-const express = require('express');
-const proposalController = require('../controllers/proposalController');
-const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
-
-const router = express.Router();
-
-// --- Vendor Endpoints (Requires 'vendor' role) ---
-router.post(
-    "/", 
-    authenticateToken, 
-    authorizeRoles(['vendor']), 
-    ...proposalController.submitProposal
-);
-router.get("/my-proposals", authenticateToken, authorizeRoles(['vendor']), proposalController.getVendorProposals);
-
-// --- Client Endpoints (Requires 'client' role) ---
-router.get("/tender/:tenderId", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.getProposalsForTender);
-router.patch("/:id/status", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.updateProposalStatus);
-
-
-// --- Admin Endpoints (Requires 'admin' role) ---
-
-// Admin: View all proposals submitted on the platform
-router.get("/admin/all", authenticateToken, authorizeRoles(['admin']), proposalController.getAllProposalsAdmin);
-
-// Admin: Delete any proposal (already existed)
-router.delete("/admin/:id", authenticateToken, authorizeRoles(['admin']), proposalController.adminDeleteProposal);
-
-module.exports = router;
-</file>
-
 <file path="backend/routes/tenderRoutes.js">
 // routes/tenderRoutes.js
 const express = require('express');
@@ -2257,283 +2276,6 @@ router.delete("/admin/:id", authenticateToken, authorizeRoles(['admin']), tender
 module.exports = router;
 </file>
 
-<file path="backend/controllers/proposalController.js">
-const Proposal = require('../models/Proposal');
-const Tender = require('../models/Tender'); // To check tender status
-const Notification = require('../models/Notification'); 
-const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
-
-// Configure Multer for file uploads for proposals
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = 'uploads/proposals';
-        fs.mkdirSync(uploadDir, { recursive: true });
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
-});
-const upload = multer({ storage: storage });
-
-const proposalController = {
-    // Vendor: Submit a new proposal for an active tender
-    submitProposal: [
-        upload.array('attachments', 3), // Allow up to 3 attachments
-        (req, res) => {
-            const vendor_id = req.user.id;
-            const tender_id = req.body.tender_id; // Must be provided in body
-            const { cover_letter, proposed_solution, pricing } = req.body;
-
-            if (!tender_id || !cover_letter || !proposed_solution || !pricing) {
-                return res.status(400).send({ message: "Tender ID, Cover Letter, Proposed Solution, and Pricing are required." });
-            }
-
-            // First, check if the tender exists and is active
-            Tender.getById(tender_id, (err, tenders) => {
-                if (err) {
-                    console.error('Error checking tender status:', err);
-                    return res.status(500).send({ message: "Error submitting proposal." });
-                }
-                if (tenders.length === 0) {
-                    return res.status(404).send({ message: "Tender not found." });
-                }
-                const tender = tenders[0];
-                if (tender.status !== 'active' && tender.status !== 'approved') { // Can submit to active or approved tenders
-                    return res.status(400).send({ message: "Proposals can only be submitted for active tenders." });
-                }
-
-                const attachments = req.files ? req.files.map(file => `/uploads/proposals/${file.filename}`) : [];
-
-                const proposalData = {
-                    tender_id,
-                    vendor_id,
-                    cover_letter,
-                    proposed_solution,
-                    pricing,
-                    attachments: JSON.stringify(attachments),
-                    status: 'pending' // Default status
-                };
-
-                Proposal.create(proposalData, (err, result) => {
-                    if (err) {
-                        console.error('Error submitting proposal:', err);
-                        return res.status(500).send({ message: "Error submitting proposal." });
-                    }
-
-
-                     // --- NEW: Notify Client of New Proposal ---
-                    const proposalId = result.insertId;
-                    Notification.create({
-                        user_id: tender.client_id,
-                        type: 'proposal_submission',
-                        message: `New proposal submitted for your tender: ${tender.title}`,
-                        reference_id: proposalId
-                    }, (notifErr) => {
-                        if (notifErr) console.warn('Failed to create proposal submission notification:', notifErr);
-                    });
-
-
-                    res.status(201).send({ message: "Proposal submitted successfully!", proposalId: result.insertId });
-                });
-            });
-        }
-    ],
-
-    // Client/Admin: Get all proposals for a specific tender
-    getProposalsForTender: (req, res) => {
-        const tender_id = req.params.tenderId; // From URL parameter
-        const currentUserId = req.user.id;
-        const currentUserType = req.user.user_type;
-
-        // First, check if the user is authorized to view proposals for this tender
-        Tender.getById(tender_id, (err, tenders) => {
-            if (err) {
-                console.error('Error checking tender for proposals:', err);
-                return res.status(500).send({ message: "Server error." });
-            }
-            if (tenders.length === 0) {
-                return res.status(404).send({ message: "Tender not found." });
-            }
-            const tender = tenders[0];
-
-            // Only client who created the tender or an admin can view proposals for it
-            if (tender.client_id !== currentUserId && currentUserType !== 'admin') {
-                return res.status(403).send({ message: "You are not authorized to view proposals for this tender." });
-            }
-
-            Proposal.findByTenderId(tender_id, (err, proposals) => {
-                if (err) {
-                    console.error('Error fetching proposals for tender:', err);
-                    return res.status(500).send({ message: "Error fetching proposals." });
-                }
-                res.status(200).send(proposals.map(proposal => {
-                    if (proposal.attachments) {
-                        proposal.attachments = JSON.parse(proposal.attachments);
-                    }
-                    return proposal;
-                }));
-            });
-        });
-    },
-
-    // Vendor: Get all proposals submitted by the authenticated vendor
-    getVendorProposals: (req, res) => {
-        const vendor_id = req.user.id;
-        Proposal.findByVendorId(vendor_id, (err, proposals) => {
-            if (err) {
-                console.error('Error fetching vendor proposals:', err);
-                return res.status(500).send({ message: "Error fetching your proposals." });
-            }
-            res.status(200).send(proposals.map(proposal => {
-                if (proposal.attachments) {
-                    proposal.attachments = JSON.parse(proposal.attachments);
-                }
-                return proposal;
-            }));
-        });
-    },
-
-    // Client/Admin: Update proposal status (accept/reject)
-    updateProposalStatus: (req, res) => {
-        const proposalId = req.params.id;
-        const { status } = req.body; // Expected status: 'accepted', 'rejected'
-        const currentUserId = req.user.id;
-        const currentUserType = req.user.user_type;
-
-        if (!status || !['accepted', 'rejected','shortlisted'].includes(status)) {
-            return res.status(400).send({ message: "Invalid status provided. Must be 'accepted' or 'rejected' or 'shortlisted'." });
-        }
-
-        // Verify authorization: Only the client who owns the tender or an admin can change proposal status
-        Proposal.getById(proposalId, (err, proposals) => {
-            if (err) {
-                console.error('Error fetching proposal for status update:', err);
-                return res.status(500).send({ message: "Server error." });
-            }
-            if (proposals.length === 0) {
-                return res.status(404).send({ message: "Proposal not found." });
-            }
-            const proposal = proposals[0];
-
-            Tender.getById(proposal.tender_id, (err, tenders) => {
-                if (err) {
-                    console.error('Error fetching tender for proposal status update:', err);
-                    return res.status(500).send({ message: "Server error." });
-                }
-                if (tenders.length === 0) {
-                    return res.status(404).send({ message: "Associated tender not found." });
-                }
-                const tender = tenders[0];
-
-                if (tender.client_id !== currentUserId && currentUserType !== 'admin') {
-                    return res.status(403).send({ message: "You are not authorized to update this proposal's status." });
-                }
-
-                Proposal.update(proposalId, { status }, (err, result) => {
-                    if (err) {
-                        console.error('Error updating proposal status:', err);
-                        return res.status(500).send({ message: "Error updating proposal status." });
-                    }
-                    if (result.affectedRows === 0) {
-                        return res.status(404).send({ message: "Proposal not found for update." });
-                    }
-
-                       
-                     // --- NEW: Notify Vendor of Proposal Status Update ---
-                let statusMessage;
-                if (status === 'shortlisted') {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been shortlisted!`;
-                } else if (status === 'accepted') {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been accepted (Awarded)!`;
-                } else {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been rejected.`;
-                }
-                
-                Notification.create({
-                    user_id: proposal.vendor_id,
-                    type: `proposal_status_${status}`,
-                    message: statusMessage,
-                    reference_id: proposalId
-                }, (notifErr) => {
-                    if (notifErr) console.warn('Failed to create vendor status notification:', notifErr);
-                });
-
-
-                    res.status(200).send({ message: `Proposal status updated to ${status} successfully!` });
-                });
-            });
-        });
-    },
-
-    // --- NEW ADMIN FUNCTION ---
-    
-    // Admin: View all proposals submitted on the platform
-    getAllProposalsAdmin: (req, res) => {
-        Proposal.getAll((err, proposals) => { 
-            if (err) {
-                console.error('Error fetching all proposals (Admin):', err);
-                return res.status(500).send({ message: "Error fetching all proposals." });
-            }
-            res.status(200).send(proposals.map(proposal => {
-                if (proposal.attachments) {
-                    proposal.attachments = JSON.parse(proposal.attachments);
-                }
-                return proposal;
-            }));
-        });
-    },
-
-    // Admin: Delete any proposal
-    adminDeleteProposal: (req, res) => {
-        const proposalId = req.params.id;
-
-        Proposal.getById(proposalId, (err, proposals) => {
-            if (err) {
-                console.error('Error fetching proposal for admin deletion:', err);
-                return res.status(500).send({ message: "Error fetching proposal." });
-            }
-            if (proposals.length === 0) {
-                return res.status(404).send({ message: "Proposal not found." });
-            }
-            const proposal = proposals[0];
-
-            // Optionally, delete associated files from the filesystem here
-            if (proposal.attachments) {
-                try {
-                    const attachments = JSON.parse(proposal.attachments);
-                    attachments.forEach(filePath => {
-                        const fullPath = path.join(__dirname, '..', filePath);
-                        fs.unlink(fullPath, (unlinkErr) => {
-                            if (unlinkErr && unlinkErr.code !== 'ENOENT') {
-                                console.warn(`Failed to delete old attachment: ${fullPath}`, unlinkErr);
-                            }
-                        });
-                    });
-                } catch (e) {
-                    console.error('Error parsing attachments for deletion (admin):', e);
-                }
-            }
-
-            Proposal.delete(proposalId, (err, result) => {
-                if (err) {
-                    console.error('Error admin deleting proposal:', err);
-                    return res.status(500).send({ message: "Error deleting proposal." });
-                }
-                if (result.affectedRows === 0) {
-                    return res.status(404).send({ message: "Proposal not found for deletion." });
-                }
-                res.status(200).send({ message: "Proposal deleted by Admin successfully!" });
-            });
-        });
-    }
-};
-
-module.exports = proposalController;
-</file>
-
 <file path="package.json">
 {
   "name": "backend-only-app",
@@ -2569,6 +2311,65 @@ module.exports = proposalController;
 }
 </file>
 
+<file path="backend/routes/proposalRoutes.js">
+const express = require('express');
+const proposalController = require('../controllers/proposalController');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+// --- Vendor Endpoints (Requires 'vendor' role) ---
+
+// Vendor: View all submitted proposals (Dashboard) (R2, R7)
+// **CRITICAL FIX: Placed before the dynamic /:id route.**
+router.get("/my-proposals", authenticateToken, authorizeRoles(['vendor']), proposalController.getVendorProposals); 
+
+// Vendor: Submit a proposal (R1)
+router.post(
+    "/", 
+    authenticateToken, 
+    authorizeRoles(['vendor']), 
+    ...proposalController.submitProposal 
+);
+
+// Get proposal detail (Used by Client/Vendor/Admin) (R2, R4)
+router.get(
+    "/:id", 
+    authenticateToken, 
+    authorizeRoles(['client', 'admin', 'vendor']), 
+    proposalController.getProposalDetail
+);
+
+
+// --- Shared Endpoints (Status Update) ---
+
+// Client/Admin: Shortlist/Award/Reject (R5, R6)
+// Vendor: Withdraw (R3)
+router.patch(
+    "/:id/status", 
+    authenticateToken, 
+    authorizeRoles(['client', 'admin', 'vendor']), 
+    proposalController.updateProposalStatus
+);
+
+
+// --- Client Endpoints (Requires 'client' role) ---
+
+// Client: View all proposals for a specific tender (List view) (R4)
+router.get("/tender/:tenderId", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.getProposalsForTender);
+
+
+// --- Admin Endpoints (Requires 'admin' role) ---
+
+// Admin: View all proposals submitted on the platform (Oversight) (R8)
+router.get("/admin/all", authenticateToken, authorizeRoles(['admin']), proposalController.getAllProposalsAdmin);
+
+// Admin: Delete any proposal
+router.delete("/admin/:id", authenticateToken, authorizeRoles(['admin']), proposalController.adminDeleteProposal);
+
+module.exports = router;
+</file>
+
 <file path="backend/app.js">
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -2582,7 +2383,7 @@ const userRoutes = require('./routes/userRoutes');
 const tenderRoutes = require('./routes/tenderRoutes');
 const proposalRoutes = require('./routes/proposalRoutes');
 const notificationRoutes = require('./routes/notificationRoutes'); 
-const adminRoutes = require('./routes/adminRoutes'); // NEW: For Content Management & Analytics
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const port = process.env.PORT || 7000;
@@ -2600,7 +2401,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tenders', tenderRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes); // NEW Admin Routes for Content & Analytics
+app.use('/api/admin', adminRoutes);
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
@@ -2611,6 +2412,381 @@ app.get('/', (req, res) => {
 app.listen(port, () => console.log(`Server is running on port ${port}`));
 
 module.exports = app;
+</file>
+
+<file path="backend/controllers/proposalController.js">
+const Proposal = require('../models/Proposal');
+const Tender = require('../models/Tender'); 
+const Notification = require('../models/Notification'); 
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+
+// Configure Multer for file uploads for proposals
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'uploads/proposals';
+        // Ensure directory exists
+        if (!fs.existsSync(path.join(__dirname, '..', uploadDir))) {
+            fs.mkdirSync(path.join(__dirname, '..', uploadDir), { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+const proposalController = {
+    // Vendor: Submit a new proposal for an active tender (R1)
+    submitProposal: [
+        upload.array('attachments', 5), // Increased limit for attachments
+        (req, res) => {
+            const vendor_id = req.user.id;
+            const tender_id = req.body.tender_id; 
+            const { cover_letter, proposed_solution, pricing } = req.body;
+
+            // R1: Required fields validation
+            if (!tender_id || !cover_letter || !proposed_solution || !pricing) {
+                // Ensure files are cleaned up if validation fails
+                if (req.files) {
+                    req.files.forEach(file => fs.unlinkSync(file.path));
+                }
+                return res.status(400).send({ message: "Tender ID, Cover Letter, Proposed Solution, and Pricing are required." });
+            }
+
+            // Check if the tender is active and not passed the deadline
+            Tender.getById(tender_id, (err, tenders) => {
+                if (err) {
+                    console.error('Error checking tender status:', err);
+                    return res.status(500).send({ message: "Error submitting proposal." });
+                }
+                if (tenders.length === 0) {
+                    return res.status(404).send({ message: "Tender not found." });
+                }
+                const tender = tenders[0];
+                
+                const now = new Date();
+                if (tender.deadline && new Date(tender.deadline) < now) {
+                     return res.status(400).send({ message: "Tender submission deadline has passed." });
+                }
+                
+                if (tender.status !== 'active') { 
+                    return res.status(400).send({ message: "Proposals can only be submitted for active tenders." });
+                }
+
+                const attachments = req.files ? req.files.map(file => `/uploads/proposals/${file.filename}`) : [];
+
+                const proposalData = {
+                    tender_id,
+                    vendor_id,
+                    cover_letter,
+                    proposed_solution,
+                    pricing,
+                    attachments: JSON.stringify(attachments),
+                    status: 'submitted' // Initial status set to 'submitted'
+                };
+
+                Proposal.create(proposalData, (err, result) => {
+                    if (err) {
+                        console.error('Error submitting proposal:', err);
+                        // Clean up uploaded files on DB error
+                        if (req.files) {
+                            req.files.forEach(file => fs.unlinkSync(file.path));
+                        }
+                        return res.status(500).send({ message: "Error submitting proposal." });
+                    }
+
+                    // 1) The system shall notify Clients upon new proposal submission
+                    const proposalId = result.insertId;
+                    Notification.create({
+                        user_id: tender.client_id,
+                        type: 'proposal_submission',
+                        message: `New proposal submitted for your tender: ${tender.title}`,
+                        reference_id: proposalId
+                    }, (notifErr) => {
+                        if (notifErr) console.warn('Failed to create proposal submission notification:', notifErr);
+                    });
+
+                    res.status(201).send({ message: "Proposal submitted successfully!", proposalId: proposalId });
+                });
+            });
+        }
+    ],
+
+    // Client/Admin: Get all proposals for a specific tender (R4)
+    getProposalsForTender: (req, res) => {
+        const tender_id = req.params.tenderId; 
+        const currentUserId = req.user.id;
+        const currentUserType = req.user.user_type;
+
+        Tender.getById(tender_id, (err, tenders) => {
+            if (err || tenders.length === 0) {
+                return res.status(404).send({ message: "Tender not found." });
+            }
+            const tender = tenders[0];
+
+            // Authorization: Client owner or Admin
+            if (tender.client_id !== currentUserId && currentUserType !== 'admin') {
+                return res.status(403).send({ message: "You are not authorized to view proposals for this tender." });
+            }
+
+            Proposal.findByTenderId(tender_id, (err, proposals) => {
+                if (err) {
+                    console.error('Error fetching proposals for tender:', err);
+                    return res.status(500).send({ message: "Error fetching proposals." });
+                }
+                // R4: Proposal view includes vendor details, documents, pricing (handled by model join)
+                res.status(200).send(proposals.map(proposal => {
+                    if (proposal.attachments) {
+                        proposal.attachments = JSON.parse(proposal.attachments);
+                    }
+                    return proposal;
+                }));
+            });
+        });
+    },
+    
+    // Get details for a single proposal (R2, R4) - UPDATED TO INCLUDE 'VIEWED' NOTIFICATION
+    getProposalDetail: (req, res) => {
+        const proposalId = req.params.id;
+        const currentUserId = req.user.id;
+        const currentUserType = req.user.user_type;
+        
+        // Helper function to send the response
+        const sendResponse = (proposal) => {
+            if (proposal.attachments) proposal.attachments = JSON.parse(proposal.attachments);
+            res.status(200).send(proposal);
+        };
+
+        Proposal.getById(proposalId, (err, proposals) => {
+            if (err || proposals.length === 0) {
+                return res.status(404).send({ message: "Proposal not found." });
+            }
+            const proposal = proposals[0];
+
+            Tender.getById(proposal.tender_id, (tenderErr, tenders) => {
+                if (tenderErr || tenders.length === 0) {
+                    console.error("Error fetching associated tender.");
+                    return res.status(500).send({ message: "Error processing request." });
+                }
+                const tender = tenders[0];
+                
+                // --- Authorization Check ---
+                let isAuthorized = false;
+                let isClientOrAdminViewer = false;
+
+                if (currentUserType === 'admin') {
+                    isAuthorized = true;
+                    isClientOrAdminViewer = true;
+                } else if (currentUserType === 'vendor' && proposal.vendor_id === currentUserId) {
+                    // Vendor viewing their own proposal (R2)
+                    isAuthorized = true;
+                } else if (currentUserType === 'client' && tender.client_id === currentUserId) {
+                    // Client viewing proposal for their tender (R4)
+                    isAuthorized = true;
+                    isClientOrAdminViewer = true;
+                }
+
+                if (!isAuthorized) {
+                    return res.status(403).send({ message: "Forbidden: You are not authorized to view this proposal." });
+                }
+                
+                // --- Handle 'viewed' status update and notification (Requirement 3: viewed status) ---
+                if (isClientOrAdminViewer && proposal.status === 'submitted') {
+                    
+                    Proposal.update(proposal.id, { status: 'viewed' }, (updateErr) => {
+                        if (updateErr) {
+                            console.error('Error setting proposal status to viewed:', updateErr);
+                        } else {
+                            // Notify Vendor
+                            Notification.create({
+                                user_id: proposal.vendor_id,
+                                type: 'proposal_status_viewed',
+                                message: `Your proposal for tender "${tender.title}" has been viewed by the client.`,
+                                reference_id: proposal.id
+                            }, (notifErr) => {
+                                if (notifErr) console.warn('Failed to create viewed status notification:', notifErr);
+                            });
+                            proposal.status = 'viewed'; // Update status locally for immediate response
+                        }
+
+                        sendResponse(proposal);
+                    });
+                } else {
+                    // Send response without status update (already viewed, shortlisted, or vendor viewing)
+                    sendResponse(proposal);
+                }
+            });
+        });
+    },
+
+    // Vendor: Get all proposals submitted by the authenticated vendor (R2, R7)
+    getVendorProposals: (req, res) => {
+        const vendor_id = req.user.id;
+        Proposal.findByVendorId(vendor_id, (err, proposals) => {
+            if (err) {
+                console.error('Error fetching vendor proposals:', err);
+                return res.status(500).send({ message: "Error fetching your proposals." });
+            }
+            
+            res.status(200).send(proposals.map(proposal => {
+                if (proposal.attachments) {
+                    proposal.attachments = JSON.parse(proposal.attachments);
+                }
+                return proposal; 
+            }));
+        });
+    },
+
+    // Client/Admin/Vendor: Update proposal status (R3, R5, R6) - Confirmed for status update notifications
+    updateProposalStatus: (req, res) => {
+        const proposalId = req.params.id;
+        const { status } = req.body; 
+        const currentUserId = req.user.id;
+        const currentUserType = req.user.user_type;
+
+        // Note: 'accepted' = Awarded
+        const VALID_STATUSES = ['accepted', 'rejected', 'shortlisted', 'withdrawn', 'viewed']; 
+        if (!status || !VALID_STATUSES.includes(status)) {
+            return res.status(400).send({ 
+                message: `Invalid status provided. Must be one of: ${VALID_STATUSES.join(', ')}.` 
+            });
+        }
+
+        Proposal.getById(proposalId, (err, proposals) => {
+            if (err || proposals.length === 0) {
+                return res.status(404).send({ message: "Proposal not found." });
+            }
+            const proposal = proposals[0];
+
+            Tender.getById(proposal.tender_id, (err, tenders) => {
+                if (err || tenders.length === 0) {
+                    return res.status(404).send({ message: "Associated tender not found." });
+                }
+                const tender = tenders[0];
+                
+                // --- Authorization Logic ---
+                
+                if (currentUserType === 'vendor') {
+                    // R3: Vendor Withdrawal Check
+                    if (proposal.vendor_id !== currentUserId) {
+                        return res.status(403).send({ message: "Forbidden: Vendors can only update the status of their own proposals." });
+                    }
+                    if (status !== 'withdrawn') {
+                        return res.status(403).send({ message: "Forbidden: Vendors are only permitted to change the status to 'withdrawn'." });
+                    }
+                    // Implement deadline check for withdrawal
+                    if (tender.deadline && new Date(tender.deadline) < new Date()) {
+                         return res.status(403).send({ message: "Cannot withdraw proposal: The tender deadline has passed." });
+                    }
+                
+                } else if (currentUserType === 'client') {
+                    // R5, R6: Client Evaluation Check
+                    if (tender.client_id !== currentUserId) {
+                        return res.status(403).send({ message: "Forbidden: You are not authorized to update proposals for this tender." });
+                    }
+                    // Clients cannot use 'withdrawn' status
+                    if (status === 'withdrawn') {
+                         return res.status(400).send({ message: "Bad Request: Clients cannot use the 'withdrawn' status." });
+                    }
+                
+                } else if (currentUserType !== 'admin') {
+                    return res.status(403).send({ message: "Unauthorized role for this operation." });
+                }
+                
+                // --- Update the Proposal Status ---
+                Proposal.update(proposalId, { status }, (err, result) => {
+                    if (err) {
+                        console.error('Error updating proposal status:', err);
+                        return res.status(500).send({ message: "Error updating proposal status." });
+                    }
+
+                    // 3) Notify Vendors about status updates (Shortlisted, Accepted, Rejected, Withdrawn)
+                    let statusMessage;
+                    if (status === 'shortlisted') {
+                        statusMessage = `Your proposal for tender "${tender.title}" has been shortlisted.`;
+                    } else if (status === 'accepted') {
+                        statusMessage = `Congratulations! Your proposal for tender "${tender.title}" has been accepted (Awarded)!`;
+                    } else if (status === 'rejected') {
+                         statusMessage = `Your proposal for tender "${tender.title}" has been rejected.`;
+                    } else if (status === 'withdrawn') {
+                        statusMessage = `You successfully withdrew your proposal for tender "${tender.title}".`;
+                    } else { // viewed, etc.
+                         statusMessage = `The status of your proposal for tender "${tender.title}" was updated to: ${status}.`;
+                    }
+                    
+                    Notification.create({
+                        user_id: proposal.vendor_id,
+                        type: `proposal_status_${status}`,
+                        message: statusMessage,
+                        reference_id: proposalId
+                    }, (notifErr) => {
+                        if (notifErr) console.warn('Failed to create vendor status notification:', notifErr);
+                    });
+
+
+                    res.status(200).send({ message: `Proposal status updated to ${status} successfully!` });
+                });
+            });
+        });
+    },
+
+    // Admin: View all proposals submitted on the platform (R8)
+    getAllProposalsAdmin: (req, res) => {
+        Proposal.getAll((err, proposals) => { 
+            if (err) {
+                console.error('Error fetching all proposals (Admin):', err);
+                return res.status(500).send({ message: "Error fetching all proposals." });
+            }
+            res.status(200).send(proposals.map(proposal => {
+                if (proposal.attachments) {
+                    proposal.attachments = JSON.parse(proposal.attachments);
+                }
+                return proposal;
+            }));
+        });
+    },
+
+    // Admin: Delete any proposal
+    adminDeleteProposal: (req, res) => {
+        const proposalId = req.params.id;
+
+        Proposal.getById(proposalId, (err, proposals) => {
+            if (err || proposals.length === 0) {
+                return res.status(404).send({ message: "Proposal not found." });
+            }
+            const proposal = proposals[0];
+
+            if (proposal.attachments) {
+                try {
+                    const attachments = JSON.parse(proposal.attachments);
+                    attachments.forEach(filePath => {
+                        const fullPath = path.join(__dirname, '..', filePath);
+                        fs.unlink(fullPath, (unlinkErr) => {
+                            if (unlinkErr && unlinkErr.code !== 'ENOENT') {
+                                console.warn(`Failed to delete old attachment: ${fullPath}`, unlinkErr);
+                            }
+                        });
+                    });
+                } catch (e) {
+                    console.error('Error parsing attachments for deletion (admin):', e);
+                }
+            }
+
+            Proposal.delete(proposalId, (err, result) => {
+                if (err) {
+                    console.error('Error admin deleting proposal:', err);
+                    return res.status(500).send({ message: "Error deleting proposal." });
+                }
+                res.status(200).send({ message: "Proposal deleted by Admin successfully!" });
+            });
+        });
+    }
+};
+
+module.exports = proposalController;
 </file>
 
 </files>

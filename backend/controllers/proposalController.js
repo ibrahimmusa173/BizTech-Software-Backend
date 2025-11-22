@@ -81,7 +81,7 @@ const proposalController = {
                         return res.status(500).send({ message: "Error submitting proposal." });
                     }
 
-                    // Notify Client of New Proposal
+                    // 1) The system shall notify Clients upon new proposal submission
                     const proposalId = result.insertId;
                     Notification.create({
                         user_id: tender.client_id,
@@ -131,48 +131,77 @@ const proposalController = {
         });
     },
     
-    // Get details for a single proposal (R2, R4)
+    // Get details for a single proposal (R2, R4) - UPDATED TO INCLUDE 'VIEWED' NOTIFICATION
     getProposalDetail: (req, res) => {
         const proposalId = req.params.id;
         const currentUserId = req.user.id;
         const currentUserType = req.user.user_type;
+        
+        // Helper function to send the response
+        const sendResponse = (proposal) => {
+            if (proposal.attachments) proposal.attachments = JSON.parse(proposal.attachments);
+            res.status(200).send(proposal);
+        };
 
         Proposal.getById(proposalId, (err, proposals) => {
             if (err || proposals.length === 0) {
                 return res.status(404).send({ message: "Proposal not found." });
             }
-
             const proposal = proposals[0];
 
-            // 1. Admin is always authorized
-            if (currentUserType === 'admin') {
-                if (proposal.attachments) proposal.attachments = JSON.parse(proposal.attachments);
-                return res.status(200).send(proposal);
-            }
-            
-            // 2. Vendor check (must be the submitting vendor - R2)
-            if (currentUserType === 'vendor') {
-                if (proposal.vendor_id === currentUserId) {
-                    if (proposal.attachments) proposal.attachments = JSON.parse(proposal.attachments);
-                    return res.status(200).send(proposal);
+            Tender.getById(proposal.tender_id, (tenderErr, tenders) => {
+                if (tenderErr || tenders.length === 0) {
+                    console.error("Error fetching associated tender.");
+                    return res.status(500).send({ message: "Error processing request." });
                 }
-                return res.status(403).send({ message: "Forbidden: Vendors can only view their own proposals." });
-            }
-            
-            // 3. Client check (must own the associated tender - R4)
-            if (currentUserType === 'client') {
-                Tender.getById(proposal.tender_id, (tenderErr, tenders) => {
-                    if (tenderErr || tenders.length === 0 || tenders[0].client_id !== currentUserId) {
-                        return res.status(403).send({ message: "Forbidden: You do not own the tender associated with this proposal." });
-                    }
-                    
-                    if (proposal.attachments) proposal.attachments = JSON.parse(proposal.attachments);
-                    res.status(200).send(proposal);
-                });
-                return;
-            }
+                const tender = tenders[0];
+                
+                // --- Authorization Check ---
+                let isAuthorized = false;
+                let isClientOrAdminViewer = false;
 
-            return res.status(403).send({ message: "Unauthorized role to view proposal details." });
+                if (currentUserType === 'admin') {
+                    isAuthorized = true;
+                    isClientOrAdminViewer = true;
+                } else if (currentUserType === 'vendor' && proposal.vendor_id === currentUserId) {
+                    // Vendor viewing their own proposal (R2)
+                    isAuthorized = true;
+                } else if (currentUserType === 'client' && tender.client_id === currentUserId) {
+                    // Client viewing proposal for their tender (R4)
+                    isAuthorized = true;
+                    isClientOrAdminViewer = true;
+                }
+
+                if (!isAuthorized) {
+                    return res.status(403).send({ message: "Forbidden: You are not authorized to view this proposal." });
+                }
+                
+                // --- Handle 'viewed' status update and notification (Requirement 3: viewed status) ---
+                if (isClientOrAdminViewer && proposal.status === 'submitted') {
+                    
+                    Proposal.update(proposal.id, { status: 'viewed' }, (updateErr) => {
+                        if (updateErr) {
+                            console.error('Error setting proposal status to viewed:', updateErr);
+                        } else {
+                            // Notify Vendor
+                            Notification.create({
+                                user_id: proposal.vendor_id,
+                                type: 'proposal_status_viewed',
+                                message: `Your proposal for tender "${tender.title}" has been viewed by the client.`,
+                                reference_id: proposal.id
+                            }, (notifErr) => {
+                                if (notifErr) console.warn('Failed to create viewed status notification:', notifErr);
+                            });
+                            proposal.status = 'viewed'; // Update status locally for immediate response
+                        }
+
+                        sendResponse(proposal);
+                    });
+                } else {
+                    // Send response without status update (already viewed, shortlisted, or vendor viewing)
+                    sendResponse(proposal);
+                }
+            });
         });
     },
 
@@ -194,7 +223,7 @@ const proposalController = {
         });
     },
 
-    // Client/Admin/Vendor: Update proposal status (R3, R5, R6)
+    // Client/Admin/Vendor: Update proposal status (R3, R5, R6) - Confirmed for status update notifications
     updateProposalStatus: (req, res) => {
         const proposalId = req.params.id;
         const { status } = req.body; 
@@ -257,7 +286,7 @@ const proposalController = {
                         return res.status(500).send({ message: "Error updating proposal status." });
                     }
 
-                    // 5. Notify Vendor of Proposal Status Update
+                    // 3) Notify Vendors about status updates (Shortlisted, Accepted, Rejected, Withdrawn)
                     let statusMessage;
                     if (status === 'shortlisted') {
                         statusMessage = `Your proposal for tender "${tender.title}" has been shortlisted.`;

@@ -1,3 +1,4 @@
+
 // backend/models/User.js
 const db = require('../config/db'); // Import the database connection
 const bcrypt = require('bcryptjs'); // For password hashing
@@ -6,11 +7,6 @@ const User = {
     // Finds a user by email
     findByEmail: (email, callback) => {
         db.query("SELECT * FROM users WHERE email = ?", [email], callback);
-    },
-
-    // Finds a user by ID
-    getById: (id, callback) => {
-        db.query("SELECT * FROM users WHERE id = ?", [id], callback);
     },
 
     // Creates a new user with hashed password
@@ -27,52 +23,15 @@ const User = {
 
     // Dummy method for getting all users (can be expanded for admin view)
     getAll: (callback) => {
-        db.query("SELECT id, name, company_name, email, user_type, created_at, updated_at FROM users", callback);
+        db.query("SELECT id, name, company_name, email, user_type FROM users", callback);
     },
 
-    // General update method for user profile and admin management
-    update: (userId, userData, callback) => {
-        let fields = [];
-        let values = [];
-
-        // Handle password separately to hash it
-        if (userData.password) {
-            bcrypt.hash(userData.password, 10, (err, hashedPassword) => {
-                if (err) return callback(err);
-                fields.push("password = ?");
-                values.push(hashedPassword);
-                delete userData.password; // Remove plain password from userData
-                User._buildUpdateQuery(userId, userData, fields, values, callback);
-            });
-        } else {
-            User._buildUpdateQuery(userId, userData, fields, values, callback);
-        }
+    // ADDED: Counts all registered users
+    countAll: (callback) => {
+        db.query("SELECT COUNT(id) AS totalUsers FROM users", callback);
     },
 
-    _buildUpdateQuery: (userId, userData, fields, values, callback) => {
-        for (const key in userData) {
-            if (userData.hasOwnProperty(key) && userData[key] !== undefined) {
-                fields.push(`${key} = ?`);
-                values.push(userData[key]);
-            }
-        }
-
-        if (fields.length === 0) {
-            return callback(null, { affectedRows: 0 }); // No fields to update
-        }
-
-        const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
-        values.push(userId);
-
-        db.query(sql, values, callback);
-    },
-
-    delete: (id, callback) => {
-        const sql = "DELETE FROM users WHERE id = ?";
-        db.query(sql, [id], callback);
-    },
-
-    // --- Methods for password reset (already existing, kept as is) ---
+    // --- New methods for password reset ---
 
     // Save reset token and expiry to the database for a user
     saveResetToken: (email, token, expire, callback) => {
@@ -117,6 +76,8 @@ const User = {
             );
         });
     },
+
+    // You can add more user-related methods here (e.g., update profile, delete user)
 };
 
 module.exports = User;
