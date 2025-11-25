@@ -1,22 +1,84 @@
 // controllers/adminController.js
-const db = require('../config/db'); // Assuming the ability to access the database directly for complex reports
+const db = require('../config/db'); 
+const Guideline = require('../models/Guideline'); // NEW: Import Guideline model
 
 const adminController = {
 
-    // --- Content Management Functions (Stubs require underlying Models) ---
+    // --- Content Management Functions (Guideline Implementation) ---
 
-    // Create/Edit/Delete Guidelines
+    // 1) Admins to create guidelines
     createGuideline: (req, res) => {
-        // Implementation: Insert new guideline/FAQ content into a dedicated table
-        res.status(201).send({ message: "Guideline created successfully (Requires Content Model)." });
+        const { title, content, type, status } = req.body; 
+        
+        if (!title || !content || !type) {
+            return res.status(400).send({ message: "Title, content, and type are required." });
+        }
+
+        Guideline.create({ title, content, type, status }, (err, result) => {
+            if (err) {
+                console.error('Error creating guideline:', err);
+                return res.status(500).send({ message: "Error creating guideline." });
+            }
+            res.status(201).send({ message: "Guideline created successfully!", id: result.insertId });
+        });
     },
+    
+    // 1) Admins to edit guidelines
     updateGuideline: (req, res) => {
-        // Implementation: Update existing guideline content
-        res.status(200).send({ message: `Guideline ${req.params.id} updated successfully (Requires Content Model).` });
+        const id = req.params.id;
+        const updateData = req.body;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).send({ message: "No update data provided." });
+        }
+
+        Guideline.update(id, updateData, (err, result) => {
+            if (err) {
+                console.error('Error updating guideline:', err);
+                return res.status(500).send({ message: "Error updating guideline." });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).send({ message: "Guideline not found." });
+            }
+            res.status(200).send({ message: `Guideline ${id} updated successfully.` });
+        });
     },
+    
+    // 1) Admins to delete guidelines
     deleteGuideline: (req, res) => {
-        // Implementation: Delete guideline content
-        res.status(200).send({ message: `Guideline ${req.params.id} deleted successfully (Requires Content Model).` });
+        const id = req.params.id;
+        Guideline.delete(id, (err, result) => {
+            if (err) {
+                console.error('Error deleting guideline:', err);
+                return res.status(500).send({ message: "Error deleting guideline." });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).send({ message: "Guideline not found." });
+            }
+            res.status(200).send({ message: `Guideline ${id} deleted successfully.` });
+        });
+    },
+
+    // Admin endpoint to list all guidelines (including drafts)
+    listGuidelinesAdmin: (req, res) => {
+        Guideline.getAllForAdmin((err, guidelines) => {
+            if (err) {
+                console.error('Error listing guidelines:', err);
+                return res.status(500).send({ message: "Error fetching guidelines." });
+            }
+            res.status(200).send(guidelines);
+        });
+    },
+
+    // 2) Client access function
+    getPublishedTenderGuidelines: (req, res) => {
+        Guideline.getAllPublishedTenderGuidelines((err, guidelines) => {
+            if (err) {
+                console.error('Error fetching published guidelines:', err);
+                return res.status(500).send({ message: "Error fetching guidelines." });
+            }
+            res.status(200).send(guidelines);
+        });
     },
 
     // Manage Categories/Taxonomies

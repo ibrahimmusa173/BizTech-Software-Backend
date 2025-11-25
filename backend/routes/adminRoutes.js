@@ -11,9 +11,11 @@ router.use(authenticateToken, authorizeRoles(['admin']));
 // --- Content Management ---
 
 // Guidelines Management (e.g., for writing tender requests)
+// Requirement 1: Admins can create/edit/delete guidelines
 router.post('/content/guidelines', adminController.createGuideline);
 router.put('/content/guidelines/:id', adminController.updateGuideline);
 router.delete('/content/guidelines/:id', adminController.deleteGuideline);
+router.get('/content/guidelines', adminController.listGuidelinesAdmin); // Admin list endpoint
 
 // Category, Industry, and Taxonomy Management
 router.post('/taxonomy', adminController.createTaxonomyItem);

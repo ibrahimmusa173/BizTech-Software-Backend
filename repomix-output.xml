@@ -125,122 +125,6 @@ sqlconnect.connect((err) => {
 module.exports = sqlconnect;
 </file>
 
-<file path="backend/controllers/adminController.js">
-// controllers/adminController.js
-const db = require('../config/db'); // Assuming the ability to access the database directly for complex reports
-
-const adminController = {
-
-    // --- Content Management Functions (Stubs require underlying Models) ---
-
-    // Create/Edit/Delete Guidelines
-    createGuideline: (req, res) => {
-        // Implementation: Insert new guideline/FAQ content into a dedicated table
-        res.status(201).send({ message: "Guideline created successfully (Requires Content Model)." });
-    },
-    updateGuideline: (req, res) => {
-        // Implementation: Update existing guideline content
-        res.status(200).send({ message: `Guideline ${req.params.id} updated successfully (Requires Content Model).` });
-    },
-    deleteGuideline: (req, res) => {
-        // Implementation: Delete guideline content
-        res.status(200).send({ message: `Guideline ${req.params.id} deleted successfully (Requires Content Model).` });
-    },
-
-    // Manage Categories/Taxonomies
-    createTaxonomyItem: (req, res) => {
-        // Implementation: Insert new category/industry into a taxonomy table
-        res.status(201).send({ message: "Taxonomy item created (Requires Taxonomy Model)." });
-    },
-    updateTaxonomyItem: (req, res) => {
-        // Implementation: Update taxonomy item
-        res.status(200).send({ message: `Taxonomy item ${req.params.id} updated (Requires Taxonomy Model).` });
-    },
-    deleteTaxonomyItem: (req, res) => {
-        // Implementation: Delete taxonomy item
-        res.status(200).send({ message: `Taxonomy item ${req.params.id} deleted (Requires Taxonomy Model).` });
-    },
-    listTaxonomy: (req, res) => {
-        // Implementation: Fetch all active categories/industries
-        res.status(200).send({ message: "List of taxonomies retrieved (Requires Taxonomy Model)." });
-    },
-
-
-    // --- Analytics and Reporting Functions ---
-
-    getDashboardStats: (req, res) => {
-        // Provides platform usage dashboards (e.g., active users, tenders posted, proposals submitted)
-        const statsQuery = `
-            SELECT 
-                (SELECT COUNT(id) FROM users WHERE status='active') AS total_active_users,
-                (SELECT COUNT(id) FROM users WHERE user_type='client' AND status='active') AS active_clients,
-                (SELECT COUNT(id) FROM users WHERE user_type='vendor' AND status='active') AS active_vendors,
-                (SELECT COUNT(id) FROM tenders) AS total_tenders_posted,
-                (SELECT COUNT(id) FROM tenders WHERE status='active') AS tenders_currently_active,
-                (SELECT COUNT(id) FROM proposals) AS total_proposals_submitted;
-        `;
-
-        db.query(statsQuery, (err, results) => {
-            if (err) {
-                console.error('Error fetching dashboard stats:', err);
-                return res.status(500).send({ message: "Error fetching analytics data." });
-            }
-
-            res.status(200).send({
-                message: "Dashboard statistics retrieved successfully.",
-                data: results[0]
-            });
-        });
-    },
-
-    getUserReport: (req, res) => {
-        // Placeholder for complex user reports (e.g., breakdown by activity, registration dates)
-        res.status(200).send({ message: "Detailed User Report generated (Stub for complex queries)." });
-    },
-    
-    getTenderReport: (req, res) => {
-        // Placeholder for complex tender reports (e.g., category distribution, proposal volume per tender)
-        res.status(200).send({ message: "Detailed Tender Report generated (Stub for complex queries)." });
-    }
-};
-
-module.exports = adminController;
-</file>
-
-<file path="backend/routes/adminRoutes.js">
-// routes/adminRoutes.js
-const express = require('express');
-const adminController = require('../controllers/adminController');
-const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
-
-const router = express.Router();
-
-// Apply Auth and Admin role check to all routes in this file
-router.use(authenticateToken, authorizeRoles(['admin']));
-
-// --- Content Management ---
-
-// Guidelines Management (e.g., for writing tender requests)
-router.post('/content/guidelines', adminController.createGuideline);
-router.put('/content/guidelines/:id', adminController.updateGuideline);
-router.delete('/content/guidelines/:id', adminController.deleteGuideline);
-
-// Category, Industry, and Taxonomy Management
-router.post('/taxonomy', adminController.createTaxonomyItem);
-router.put('/taxonomy/:id', adminController.updateTaxonomyItem);
-router.delete('/taxonomy/:id', adminController.deleteTaxonomyItem);
-router.get('/taxonomy', adminController.listTaxonomy); // List all current taxonomies
-
-
-// --- Analytics and Reporting ---
-router.get('/analytics/dashboard', adminController.getDashboardStats);
-router.get('/analytics/user-report', adminController.getUserReport);
-router.get('/analytics/tender-report', adminController.getTenderReport);
-
-
-module.exports = router;
-</file>
-
 <file path="backend/routes/notificationRoutes.js">
 const express = require('express');
 const notificationController = require('../controllers/notificationController');
@@ -258,146 +142,6 @@ router.get("/unread-count", authenticateToken, notificationController.getUnreadC
 router.patch("/mark-read/:id?", authenticateToken, notificationController.markNotificationAsRead);
 
 module.exports = router;
-</file>
-
-<file path="backend/controllers/authController.js">
-// backend/controllers/authController.js
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken'); // For authentication tokens
-const crypto = require('crypto');     // For generating tokens
-const { sendPasswordResetEmail } = require('../utils/emailService'); // Import email service
-
-const authController = {
-    register: (req, res) => {
-        const { name, company_name, email, password, user_type } = req.body;
-
-        // Basic validation
-        if (!name || !email || !password || !user_type) {
-            return res.status(400).send({ message: "All required fields must be provided." });
-        }
-        if (!['client', 'vendor', 'admin'].includes(user_type)) { // Corrected 'bidder' to 'vendor'
-            return res.status(400).send({ message: "Invalid user type. Must be 'client', 'vendor', or 'admin'." });
-        }
-
-        User.findByEmail(email, (err, users) => {
-            if (err) {
-                console.error('Error during registration (findByEmail):', err);
-                return res.status(500).send({ message: "Server error during registration." });
-            }
-            if (users.length > 0) {
-                return res.status(409).send({ message: "Email already registered." });
-            }
-
-            User.create({ name, company_name, email, password, user_type }, (err, result) => {
-                if (err) {
-                    console.error('Error during registration (create user):', err);
-                    return res.status(500).send({ message: "Error registering user." });
-                }
-                res.status(201).send({ message: "User registered successfully!", userId: result.insertId });
-            });
-        });
-    },
-
-    login: (req, res) => {
-        const { email, password } = req.body;
-
-        User.findByEmail(email, (err, users) => {
-            if (err) {
-                console.error('Error during login (findByEmail):', err);
-                return res.status(500).send({ message: "Server error during login." });
-            }
-            if (users.length === 0) {
-                return res.status(401).send({ message: "Invalid credentials." });
-            }
-
-            const user = users[0];
-            bcrypt.compare(password, user.password, (err, isMatch) => {
-                if (err) {
-                    console.error('Error during login (bcrypt.compare):', err);
-                    return res.status(500).send({ message: "Server error during login." });
-                }
-                if (!isMatch) {
-                    return res.status(401).send({ message: "Invalid credentials." });
-                }
-
-                const token = jwt.sign(
-                    { id: user.id, email: user.email, user_type: user.user_type },
-                    process.env.JWT_SECRET || 'supersecretjwtkey',
-                    { expiresIn: '1h' }
-                );
-
-                res.status(200).send({ message: "Logged in successfully!", token, user: { id: user.id, name: user.name, email: user.email, user_type: user.user_type } });
-            });
-        });
-    },
-
-    forgotPassword: (req, res) => {
-        const { email } = req.body;
-        if (!email) {
-            return res.status(400).send({ message: "Email is required." });
-        }
-
-        User.findByEmail(email, async (err, users) => {
-            if (err) {
-                console.error('Error during forgotPassword (findByEmail):', err);
-                return res.status(200).send({ message: "If an account with that email exists, a password reset link has been sent." });
-            }
-            if (users.length === 0) {
-                return res.status(200).send({ message: "If an account with that email exists, a password reset link has been sent." });
-            }
-
-            const user = users[0];
-
-            const resetToken = crypto.randomBytes(32).toString('hex');
-            const resetExpire = new Date(Date.now() + 3600000); // 1 hour
-
-            User.saveResetToken(user.email, resetToken, resetExpire, async (err) => {
-                if (err) {
-                    console.error('Error saving reset token:', err);
-                    return res.status(500).send({ message: "Error initiating password reset." });
-                }
-
-                const emailSent = await sendPasswordResetEmail(user.email, resetToken);
-
-                if (emailSent) {
-                    res.status(200).send({ message: "Password reset link sent to your email!" });
-                } else {
-                    res.status(500).send({ message: "Failed to send password reset email. Please try again later." });
-                }
-            });
-        });
-    },
-
-    resetPassword: (req, res) => {
-        const { token } = req.params;
-        const { newPassword } = req.body;
-
-        if (!newPassword || newPassword.length < 6) {
-            return res.status(400).send({ message: "New password must be at least 6 characters long." });
-        }
-
-        User.findByResetToken(token, (err, user) => {
-            if (err) {
-                if (err.kind === "not_found") {
-                    return res.status(400).send({ message: "Password reset token is invalid or has expired." });
-                }
-                console.error('Error finding user by reset token:', err);
-                return res.status(500).send({ message: "Server error during password reset." });
-            }
-
-            User.updatePassword(user.id, newPassword, (err) => {
-                if (err) {
-                    console.error('Error updating password:', err);
-                    return res.status(500).send({ message: "Error resetting password." });
-                }
-                res.status(200).send({ message: "Password has been successfully reset!" });
-            });
-        });
-    },
-};
-
-module.exports = authController;
 </file>
 
 <file path="backend/repomix-output.xml">
@@ -940,6 +684,88 @@ module.exports = { sendPasswordResetEmail };
 </files>
 </file>
 
+<file path="backend/controllers/adminController.js">
+// controllers/adminController.js
+const db = require('../config/db'); // Assuming the ability to access the database directly for complex reports
+
+const adminController = {
+
+    // --- Content Management Functions (Stubs require underlying Models) ---
+
+    // Create/Edit/Delete Guidelines
+    createGuideline: (req, res) => {
+        // Implementation: Insert new guideline/FAQ content into a dedicated table
+        res.status(201).send({ message: "Guideline created successfully (Requires Content Model)." });
+    },
+    updateGuideline: (req, res) => {
+        // Implementation: Update existing guideline content
+        res.status(200).send({ message: `Guideline ${req.params.id} updated successfully (Requires Content Model).` });
+    },
+    deleteGuideline: (req, res) => {
+        // Implementation: Delete guideline content
+        res.status(200).send({ message: `Guideline ${req.params.id} deleted successfully (Requires Content Model).` });
+    },
+
+    // Manage Categories/Taxonomies
+    createTaxonomyItem: (req, res) => {
+        // Implementation: Insert new category/industry into a taxonomy table
+        res.status(201).send({ message: "Taxonomy item created (Requires Taxonomy Model)." });
+    },
+    updateTaxonomyItem: (req, res) => {
+        // Implementation: Update taxonomy item
+        res.status(200).send({ message: `Taxonomy item ${req.params.id} updated (Requires Taxonomy Model).` });
+    },
+    deleteTaxonomyItem: (req, res) => {
+        // Implementation: Delete taxonomy item
+        res.status(200).send({ message: `Taxonomy item ${req.params.id} deleted (Requires Taxonomy Model).` });
+    },
+    listTaxonomy: (req, res) => {
+        // Implementation: Fetch all active categories/industries
+        res.status(200).send({ message: "List of taxonomies retrieved (Requires Taxonomy Model)." });
+    },
+
+
+    // --- Analytics and Reporting Functions ---
+
+    getDashboardStats: (req, res) => {
+        // Provides platform usage dashboards (e.g., active users, tenders posted, proposals submitted)
+        const statsQuery = `
+            SELECT 
+                (SELECT COUNT(id) FROM users WHERE status='active') AS total_active_users,
+                (SELECT COUNT(id) FROM users WHERE user_type='client' AND status='active') AS active_clients,
+                (SELECT COUNT(id) FROM users WHERE user_type='vendor' AND status='active') AS active_vendors,
+                (SELECT COUNT(id) FROM tenders) AS total_tenders_posted,
+                (SELECT COUNT(id) FROM tenders WHERE status='active') AS tenders_currently_active,
+                (SELECT COUNT(id) FROM proposals) AS total_proposals_submitted;
+        `;
+
+        db.query(statsQuery, (err, results) => {
+            if (err) {
+                console.error('Error fetching dashboard stats:', err);
+                return res.status(500).send({ message: "Error fetching analytics data." });
+            }
+
+            res.status(200).send({
+                message: "Dashboard statistics retrieved successfully.",
+                data: results[0]
+            });
+        });
+    },
+
+    getUserReport: (req, res) => {
+        // Placeholder for complex user reports (e.g., breakdown by activity, registration dates)
+        res.status(200).send({ message: "Detailed User Report generated (Stub for complex queries)." });
+    },
+    
+    getTenderReport: (req, res) => {
+        // Placeholder for complex tender reports (e.g., category distribution, proposal volume per tender)
+        res.status(200).send({ message: "Detailed Tender Report generated (Stub for complex queries)." });
+    }
+};
+
+module.exports = adminController;
+</file>
+
 <file path="backend/controllers/notificationController.js">
 const Notification = require('../models/Notification');
 
@@ -1163,43 +989,6 @@ const userController = {
 module.exports = userController;
 </file>
 
-<file path="backend/middleware/authMiddleware.js">
-const jwt = require('jsonwebtoken');
-const db = require('../config/db'); // Using db to fetch user for role check
-
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).send({ message: "Access Denied: No token provided." });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
-        if (err) {
-            console.error("JWT Verification Error:", err.message);
-            return res.status(403).send({ message: "Access Denied: Invalid token." });
-        }
-        req.user = user; // Attach user payload (id, email, user_type) to the request
-        next();
-    });
-};
-
-const authorizeRoles = (roles) => {
-    return (req, res, next) => {
-        if (!req.user || !req.user.user_type) {
-            return res.status(403).send({ message: "Access Denied: User role not found." });
-        }
-        if (!roles.includes(req.user.user_type)) {
-            return res.status(403).send({ message: `Access Denied: You must be one of the following roles: ${roles.join(', ')}.` });
-        }
-        next();
-    };
-};
-
-module.exports = { authenticateToken, authorizeRoles };
-</file>
-
 <file path="backend/models/Notification.js">
 const db = require('../config/db');
 
@@ -1255,17 +1044,36 @@ const Notification = {
 module.exports = Notification;
 </file>
 
-<file path="backend/routes/authRoutes.js">
-// backend/routes/authRoutes.js
+<file path="backend/routes/adminRoutes.js">
+// routes/adminRoutes.js
 const express = require('express');
-const authController = require('../controllers/authController');
+const adminController = require('../controllers/adminController');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.post("/register", authController.register);
-router.post("/login", authController.login);
-router.post("/forgot-password", authController.forgotPassword);
-router.post("/reset-password/:token", authController.resetPassword);
+// Apply Auth and Admin role check to all routes in this file
+router.use(authenticateToken, authorizeRoles(['admin']));
+
+// --- Content Management ---
+
+// Guidelines Management (e.g., for writing tender requests)
+router.post('/content/guidelines', adminController.createGuideline);
+router.put('/content/guidelines/:id', adminController.updateGuideline);
+router.delete('/content/guidelines/:id', adminController.deleteGuideline);
+
+// Category, Industry, and Taxonomy Management
+router.post('/taxonomy', adminController.createTaxonomyItem);
+router.put('/taxonomy/:id', adminController.updateTaxonomyItem);
+router.delete('/taxonomy/:id', adminController.deleteTaxonomyItem);
+router.get('/taxonomy', adminController.listTaxonomy); // List all current taxonomies
+
+
+// --- Analytics and Reporting ---
+router.get('/analytics/dashboard', adminController.getDashboardStats);
+router.get('/analytics/user-report', adminController.getUserReport);
+router.get('/analytics/tender-report', adminController.getTenderReport);
+
 
 module.exports = router;
 </file>
@@ -1297,6 +1105,254 @@ module.exports = router;
 
 <file path="Spare/contex">
 this is only backend till api's
+</file>
+
+<file path="backend/controllers/authController.js">
+// backend/controllers/authController.js
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken'); // For authentication tokens
+const crypto = require('crypto');     // For generating tokens
+const { sendPasswordResetEmail } = require('../utils/emailService'); // Import email service
+
+const authController = {
+    register: (req, res) => {
+        const { name, company_name, email, password, user_type } = req.body;
+
+        // Basic validation
+        if (!name || !email || !password || !user_type) {
+            return res.status(400).send({ message: "All required fields must be provided." });
+        }
+        if (!['client', 'vendor', 'admin'].includes(user_type)) { // Corrected 'bidder' to 'vendor'
+            return res.status(400).send({ message: "Invalid user type. Must be 'client', 'vendor', or 'admin'." });
+        }
+
+        User.findByEmail(email, (err, users) => {
+            if (err) {
+                console.error('Error during registration (findByEmail):', err);
+                return res.status(500).send({ message: "Server error during registration." });
+            }
+            if (users.length > 0) {
+                return res.status(409).send({ message: "Email already registered." });
+            }
+
+            User.create({ name, company_name, email, password, user_type }, (err, result) => {
+                if (err) {
+                    console.error('Error during registration (create user):', err);
+                    return res.status(500).send({ message: "Error registering user." });
+                }
+                res.status(201).send({ message: "User registered successfully!", userId: result.insertId });
+            });
+        });
+    },
+
+    login: (req, res) => {
+        const { email, password } = req.body;
+
+        User.findByEmail(email, (err, users) => {
+            if (err) {
+                console.error('Error during login (findByEmail):', err);
+                return res.status(500).send({ message: "Server error during login." });
+            }
+            if (users.length === 0) {
+                return res.status(401).send({ message: "Invalid credentials." });
+            }
+
+            const user = users[0];
+            bcrypt.compare(password, user.password, (err, isMatch) => {
+                if (err) {
+                    console.error('Error during login (bcrypt.compare):', err);
+                    return res.status(500).send({ message: "Server error during login." });
+                }
+                if (!isMatch) {
+                    return res.status(401).send({ message: "Invalid credentials." });
+                }
+
+                const token = jwt.sign(
+                    { id: user.id, email: user.email, user_type: user.user_type },
+                    process.env.JWT_SECRET || 'supersecretjwtkey',
+                    { expiresIn: '1h' }
+                );
+
+                res.status(200).send({ message: "Logged in successfully!", token, user: { id: user.id, name: user.name, email: user.email, user_type: user.user_type } });
+            });
+        });
+    },
+
+    forgotPassword: (req, res) => {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).send({ message: "Email is required." });
+        }
+
+        User.findByEmail(email, async (err, users) => {
+            if (err) {
+                console.error('Error during forgotPassword (findByEmail):', err);
+                return res.status(200).send({ message: "If an account with that email exists, a password reset link has been sent." });
+            }
+            if (users.length === 0) {
+                return res.status(200).send({ message: "If an account with that email exists, a password reset link has been sent." });
+            }
+
+            const user = users[0];
+
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            const resetExpire = new Date(Date.now() + 3600000); // 1 hour
+
+            User.saveResetToken(user.email, resetToken, resetExpire, async (err) => {
+                if (err) {
+                    console.error('Error saving reset token:', err);
+                    return res.status(500).send({ message: "Error initiating password reset." });
+                }
+
+                const emailSent = await sendPasswordResetEmail(user.email, resetToken);
+
+                if (emailSent) {
+                    res.status(200).send({ message: "Password reset link sent to your email!" });
+                } else {
+                    res.status(500).send({ message: "Failed to send password reset email. Please try again later." });
+                }
+            });
+        });
+    },
+
+    resetPassword: (req, res) => {
+        const { token } = req.params;
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).send({ message: "New password must be at least 6 characters long." });
+        }
+
+        User.findByResetToken(token, (err, user) => {
+            if (err) {
+                if (err.kind === "not_found") {
+                    return res.status(400).send({ message: "Password reset token is invalid or has expired." });
+                }
+                console.error('Error finding user by reset token:', err);
+                return res.status(500).send({ message: "Server error during password reset." });
+            }
+
+            User.updatePassword(user.id, newPassword, (err) => {
+                if (err) {
+                    console.error('Error updating password:', err);
+                    return res.status(500).send({ message: "Error resetting password." });
+                }
+                res.status(200).send({ message: "Password has been successfully reset!" });
+            });
+        });
+    },
+};
+
+module.exports = authController;
+</file>
+
+<file path="backend/utils/emailService.js">
+// backend/utils/emailService.js
+const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
+dotenv.config(); // Load .env file for email credentials
+
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
+    port: process.env.EMAIL_PORT || 2525,
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.EMAIL_USER || 'your_mailtrap_username',
+        pass: process.env.EMAIL_PASS || 'your_mailtrap_password'
+    },
+});
+
+const sendPasswordResetEmail = async (toEmail, token) => {
+    // Make sure your frontend URL is correct here.
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`; // Use environment variable
+
+    const mailOptions = {
+        from: process.env.EMAIL_FROM || 'no-reply@yourdomain.com',
+        to: toEmail,
+        subject: 'Password Reset Request',
+        html: `
+            <p>You requested a password reset. Please click the link below to reset your password:</p>
+            <a href="${resetUrl}">Reset Password</a>
+            <p>This link is valid for 1 hour.</p>
+            <p>If you did not request this, please ignore this email.</p>
+        `,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Password reset email sent to ${toEmail}`);
+        return true;
+    } catch (error) {
+        console.error(`Error sending password reset email to ${toEmail}:`, error);
+        return false;
+    }
+};
+
+module.exports = { sendPasswordResetEmail };
+</file>
+
+<file path="backend/.env">
+PORT=7000
+JWT_SECRET=supersecretjwtkey # Change this to a strong, random key in production
+EMAIL_HOST=smtp.mailtrap.io
+EMAIL_PORT=2525
+EMAIL_USER=your_mailtrap_username
+EMAIL_PASS=your_mailtrap_password
+EMAIL_FROM=no-reply@yourdomain.com
+FRONTEND_URL=http://localhost:5173 # Ensure this matches your frontend's URL
+</file>
+
+<file path="backend/middleware/authMiddleware.js">
+const jwt = require('jsonwebtoken');
+const db = require('../config/db'); // Using db to fetch user for role check
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).send({ message: "Access Denied: No token provided." });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
+        if (err) {
+            console.error("JWT Verification Error:", err.message);
+            return res.status(403).send({ message: "Access Denied: Invalid token." });
+        }
+        req.user = user; // Attach user payload (id, email, user_type) to the request
+        next();
+    });
+};
+
+const authorizeRoles = (roles) => {
+    return (req, res, next) => {
+        if (!req.user || !req.user.user_type) {
+            return res.status(403).send({ message: "Access Denied: User role not found." });
+        }
+        if (!roles.includes(req.user.user_type)) {
+            return res.status(403).send({ message: `Access Denied: You must be one of the following roles: ${roles.join(', ')}.` });
+        }
+        next();
+    };
+};
+
+module.exports = { authenticateToken, authorizeRoles };
+</file>
+
+<file path="backend/routes/authRoutes.js">
+// backend/routes/authRoutes.js
+const express = require('express');
+const authController = require('../controllers/authController');
+
+const router = express.Router();
+
+router.post("/register", authController.register);
+router.post("/login", authController.login);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/reset-password/:token", authController.resetPassword);
+
+module.exports = router;
 </file>
 
 <file path="backend/models/User.js">
@@ -1424,70 +1480,14 @@ const User = {
 module.exports = User;
 </file>
 
-<file path="backend/utils/emailService.js">
-// backend/utils/emailService.js
-const nodemailer = require('nodemailer');
-const dotenv = require('dotenv');
-dotenv.config(); // Load .env file for email credentials
-
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
-    port: process.env.EMAIL_PORT || 2525,
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.EMAIL_USER || 'your_mailtrap_username',
-        pass: process.env.EMAIL_PASS || 'your_mailtrap_password'
-    },
-});
-
-const sendPasswordResetEmail = async (toEmail, token) => {
-    // Make sure your frontend URL is correct here.
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`; // Use environment variable
-
-    const mailOptions = {
-        from: process.env.EMAIL_FROM || 'no-reply@yourdomain.com',
-        to: toEmail,
-        subject: 'Password Reset Request',
-        html: `
-            <p>You requested a password reset. Please click the link below to reset your password:</p>
-            <a href="${resetUrl}">Reset Password</a>
-            <p>This link is valid for 1 hour.</p>
-            <p>If you did not request this, please ignore this email.</p>
-        `,
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Password reset email sent to ${toEmail}`);
-        return true;
-    } catch (error) {
-        console.error(`Error sending password reset email to ${toEmail}:`, error);
-        return false;
-    }
-};
-
-module.exports = { sendPasswordResetEmail };
-</file>
-
-<file path="backend/.env">
-PORT=7000
-JWT_SECRET=supersecretjwtkey # Change this to a strong, random key in production
-EMAIL_HOST=smtp.mailtrap.io
-EMAIL_PORT=2525
-EMAIL_USER=your_mailtrap_username
-EMAIL_PASS=your_mailtrap_password
-EMAIL_FROM=no-reply@yourdomain.com
-FRONTEND_URL=http://localhost:5173 # Ensure this matches your frontend's URL
-</file>
-
 <file path="backend/models/Proposal.js">
 const db = require('../config/db');
 
 const Proposal = {
     create: (proposalData, callback) => {
         const { tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status } = proposalData;
-        const sql = `INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        const sql = `INSERT INTO proposals (tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`;
         db.query(sql, [tender_id, vendor_id, cover_letter, proposed_solution, pricing, attachments, status], callback);
     },
 
@@ -1495,7 +1495,7 @@ const Proposal = {
         db.query("SELECT * FROM proposals WHERE id = ?", [id], callback);
     },
     
-    // NEW: Get all proposals for Admin view
+    // Admin: Get all proposals for oversight
     getAll: (callback) => {
         const sql = `SELECT p.*, t.title as tender_title, u.name as vendor_name, u.company_name as vendor_company
                      FROM proposals p
@@ -1505,7 +1505,7 @@ const Proposal = {
         db.query(sql, callback);
     },
 
-    // Get all proposals for a specific tender (for client/admin to view)
+    // Client/Admin: Get all proposals for a specific tender
     findByTenderId: (tenderId, callback) => {
         const sql = `SELECT p.*, u.name as vendor_name, u.company_name as vendor_company, u.email as vendor_email
                      FROM proposals p
@@ -1514,12 +1514,13 @@ const Proposal = {
         db.query(sql, [tenderId], callback);
     },
 
-    // Get all proposals submitted by a specific vendor
+    // Vendor: Get all proposals submitted by a specific vendor
     findByVendorId: (vendorId, callback) => {
         const sql = `SELECT p.*, t.title as tender_title, t.description as tender_description, t.client_id
                      FROM proposals p
                      JOIN tenders t ON p.tender_id = t.id
-                     WHERE p.vendor_id = ?`;
+                     WHERE p.vendor_id = ?
+                     ORDER BY p.created_at DESC`;
         db.query(sql, [vendorId], callback);
     },
 
@@ -1535,7 +1536,7 @@ const Proposal = {
         }
 
         if (fields.length === 0) {
-            return callback(null, { affectedRows: 0 }); // No fields to update
+            return callback(null, { affectedRows: 0 }); 
         }
 
         const sql = `UPDATE proposals SET ${fields.join(', ')} WHERE id = ?`;
@@ -1550,6 +1551,82 @@ const Proposal = {
 };
 
 module.exports = Proposal;
+</file>
+
+<file path="backend/routes/tenderRoutes.js">
+// routes/tenderRoutes.js
+const express = require('express');
+const tenderController = require('../controllers/tenderController');
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+// --- Client Endpoints (Requires 'client' role) ---
+router.post("/", authenticateToken, authorizeRoles(['client']), tenderController.createTender);
+router.get("/my-tenders", authenticateToken, authorizeRoles(['client']), tenderController.getClientTenders);
+router.patch("/:id/publish", authenticateToken, authorizeRoles(['client']), tenderController.publishTender);
+router.patch("/:id/extend-deadline", authenticateToken, authorizeRoles(['client']), tenderController.extendDeadline);
+router.patch("/:id/close", authenticateToken, authorizeRoles(['client']), tenderController.closeTender);
+router.patch("/:id/archive", authenticateToken, authorizeRoles(['client']), tenderController.archiveTender);
+router.put("/:id", authenticateToken, authorizeRoles(['client']), tenderController.updateTender);
+router.delete("/:id", authenticateToken, authorizeRoles(['client']), tenderController.deleteTender);
+
+
+// --- Vendor Endpoints (Requires 'vendor' role) ---
+router.get("/search", authenticateToken, authorizeRoles(['vendor', 'admin']), tenderController.searchTenders);
+router.get("/:id", authenticateToken, authorizeRoles(['client', 'vendor', 'admin']), tenderController.getTenderDetails);
+
+
+// --- Admin Endpoints (Requires 'admin' role) ---
+
+// Admin: View all tenders on the platform
+router.get("/admin/all", authenticateToken, authorizeRoles(['admin']), tenderController.getAllTendersAdmin); 
+
+// Admin: Moderate, approve, or reject tenders
+router.patch("/admin/:id/moderate", authenticateToken, authorizeRoles(['admin']), tenderController.moderateTender);
+
+// Admin: Edit inappropriate tenders (uses existing adminEditTender middleware array)
+router.put("/admin/:id", authenticateToken, authorizeRoles(['admin']), ...tenderController.adminEditTender); 
+
+// Admin: Delete inappropriate tenders
+router.delete("/admin/:id", authenticateToken, authorizeRoles(['admin']), tenderController.adminDeleteTender);
+
+module.exports = router;
+</file>
+
+<file path="package.json">
+{
+  "name": "backend-only-app",
+  "version": "1.0.0",
+  "description": "A backend-only application for managing items and user authentication.",
+  "main": "backend/app.js",
+  "scripts": {
+    "start": "node backend/app.js",
+    "dev": "nodemon backend/app.js"
+  },
+  "keywords": [
+    "express",
+    "mysql",
+    "auth",
+    "api"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "mysql": "^2.18.1",
+    "nodemailer": "^6.9.14"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
 </file>
 
 <file path="backend/controllers/tenderController.js">
@@ -2192,74 +2269,60 @@ const { authenticateToken, authorizeRoles } = require('../middleware/authMiddlew
 const router = express.Router();
 
 // --- Vendor Endpoints (Requires 'vendor' role) ---
+
+// Vendor: View all submitted proposals (Dashboard) (R2, R7)
+// **CRITICAL FIX: Placed before the dynamic /:id route.**
+router.get("/my-proposals", authenticateToken, authorizeRoles(['vendor']), proposalController.getVendorProposals); 
+
+// Vendor: Submit a proposal (R1)
 router.post(
     "/", 
     authenticateToken, 
     authorizeRoles(['vendor']), 
-    ...proposalController.submitProposal
+    ...proposalController.submitProposal 
 );
-router.get("/my-proposals", authenticateToken, authorizeRoles(['vendor']), proposalController.getVendorProposals);
+
+// Get proposal detail (Used by Client/Vendor/Admin) (R2, R4)
+router.get(
+    "/:id", 
+    authenticateToken, 
+    authorizeRoles(['client', 'admin', 'vendor']), 
+    proposalController.getProposalDetail
+);
+
+
+// --- Shared Endpoints (Status Update) ---
+
+// Client/Admin: Shortlist/Award/Reject (R5, R6)
+// Vendor: Withdraw (R3)
+router.patch(
+    "/:id/status", 
+    authenticateToken, 
+    authorizeRoles(['client', 'admin', 'vendor']), 
+    proposalController.updateProposalStatus
+);
+
 
 // --- Client Endpoints (Requires 'client' role) ---
+
+// Client: View all proposals for a specific tender (List view) (R4)
 router.get("/tender/:tenderId", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.getProposalsForTender);
-router.patch("/:id/status", authenticateToken, authorizeRoles(['client', 'admin']), proposalController.updateProposalStatus);
 
 
 // --- Admin Endpoints (Requires 'admin' role) ---
 
-// Admin: View all proposals submitted on the platform
+// Admin: View all proposals submitted on the platform (Oversight) (R8)
 router.get("/admin/all", authenticateToken, authorizeRoles(['admin']), proposalController.getAllProposalsAdmin);
 
-// Admin: Delete any proposal (already existed)
+// Admin: Delete any proposal
 router.delete("/admin/:id", authenticateToken, authorizeRoles(['admin']), proposalController.adminDeleteProposal);
-
-module.exports = router;
-</file>
-
-<file path="backend/routes/tenderRoutes.js">
-// routes/tenderRoutes.js
-const express = require('express');
-const tenderController = require('../controllers/tenderController');
-const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
-
-const router = express.Router();
-
-// --- Client Endpoints (Requires 'client' role) ---
-router.post("/", authenticateToken, authorizeRoles(['client']), tenderController.createTender);
-router.get("/my-tenders", authenticateToken, authorizeRoles(['client']), tenderController.getClientTenders);
-router.patch("/:id/publish", authenticateToken, authorizeRoles(['client']), tenderController.publishTender);
-router.patch("/:id/extend-deadline", authenticateToken, authorizeRoles(['client']), tenderController.extendDeadline);
-router.patch("/:id/close", authenticateToken, authorizeRoles(['client']), tenderController.closeTender);
-router.patch("/:id/archive", authenticateToken, authorizeRoles(['client']), tenderController.archiveTender);
-router.put("/:id", authenticateToken, authorizeRoles(['client']), tenderController.updateTender);
-router.delete("/:id", authenticateToken, authorizeRoles(['client']), tenderController.deleteTender);
-
-
-// --- Vendor Endpoints (Requires 'vendor' role) ---
-router.get("/search", authenticateToken, authorizeRoles(['vendor', 'admin']), tenderController.searchTenders);
-router.get("/:id", authenticateToken, authorizeRoles(['client', 'vendor', 'admin']), tenderController.getTenderDetails);
-
-
-// --- Admin Endpoints (Requires 'admin' role) ---
-
-// Admin: View all tenders on the platform
-router.get("/admin/all", authenticateToken, authorizeRoles(['admin']), tenderController.getAllTendersAdmin); 
-
-// Admin: Moderate, approve, or reject tenders
-router.patch("/admin/:id/moderate", authenticateToken, authorizeRoles(['admin']), tenderController.moderateTender);
-
-// Admin: Edit inappropriate tenders (uses existing adminEditTender middleware array)
-router.put("/admin/:id", authenticateToken, authorizeRoles(['admin']), ...tenderController.adminEditTender); 
-
-// Admin: Delete inappropriate tenders
-router.delete("/admin/:id", authenticateToken, authorizeRoles(['admin']), tenderController.adminDeleteTender);
 
 module.exports = router;
 </file>
 
 <file path="backend/controllers/proposalController.js">
 const Proposal = require('../models/Proposal');
-const Tender = require('../models/Tender'); // To check tender status
+const Tender = require('../models/Tender'); 
 const Notification = require('../models/Notification'); 
 const path = require('path');
 const fs = require('fs');
@@ -2269,7 +2332,10 @@ const multer = require('multer');
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = 'uploads/proposals';
-        fs.mkdirSync(uploadDir, { recursive: true });
+        // Ensure directory exists
+        if (!fs.existsSync(path.join(__dirname, '..', uploadDir))) {
+            fs.mkdirSync(path.join(__dirname, '..', uploadDir), { recursive: true });
+        }
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
@@ -2279,19 +2345,24 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 const proposalController = {
-    // Vendor: Submit a new proposal for an active tender
+    // Vendor: Submit a new proposal for an active tender (R1)
     submitProposal: [
-        upload.array('attachments', 3), // Allow up to 3 attachments
+        upload.array('attachments', 5), // Increased limit for attachments
         (req, res) => {
             const vendor_id = req.user.id;
-            const tender_id = req.body.tender_id; // Must be provided in body
+            const tender_id = req.body.tender_id; 
             const { cover_letter, proposed_solution, pricing } = req.body;
 
+            // R1: Required fields validation
             if (!tender_id || !cover_letter || !proposed_solution || !pricing) {
+                // Ensure files are cleaned up if validation fails
+                if (req.files) {
+                    req.files.forEach(file => fs.unlinkSync(file.path));
+                }
                 return res.status(400).send({ message: "Tender ID, Cover Letter, Proposed Solution, and Pricing are required." });
             }
 
-            // First, check if the tender exists and is active
+            // Check if the tender is active and not passed the deadline
             Tender.getById(tender_id, (err, tenders) => {
                 if (err) {
                     console.error('Error checking tender status:', err);
@@ -2301,7 +2372,13 @@ const proposalController = {
                     return res.status(404).send({ message: "Tender not found." });
                 }
                 const tender = tenders[0];
-                if (tender.status !== 'active' && tender.status !== 'approved') { // Can submit to active or approved tenders
+                
+                const now = new Date();
+                if (tender.deadline && new Date(tender.deadline) < now) {
+                     return res.status(400).send({ message: "Tender submission deadline has passed." });
+                }
+                
+                if (tender.status !== 'active') { 
                     return res.status(400).send({ message: "Proposals can only be submitted for active tenders." });
                 }
 
@@ -2314,17 +2391,20 @@ const proposalController = {
                     proposed_solution,
                     pricing,
                     attachments: JSON.stringify(attachments),
-                    status: 'pending' // Default status
+                    status: 'submitted' // Initial status set to 'submitted'
                 };
 
                 Proposal.create(proposalData, (err, result) => {
                     if (err) {
                         console.error('Error submitting proposal:', err);
+                        // Clean up uploaded files on DB error
+                        if (req.files) {
+                            req.files.forEach(file => fs.unlinkSync(file.path));
+                        }
                         return res.status(500).send({ message: "Error submitting proposal." });
                     }
 
-
-                     // --- NEW: Notify Client of New Proposal ---
+                    // Notify Client of New Proposal
                     const proposalId = result.insertId;
                     Notification.create({
                         user_id: tender.client_id,
@@ -2335,31 +2415,25 @@ const proposalController = {
                         if (notifErr) console.warn('Failed to create proposal submission notification:', notifErr);
                     });
 
-
-                    res.status(201).send({ message: "Proposal submitted successfully!", proposalId: result.insertId });
+                    res.status(201).send({ message: "Proposal submitted successfully!", proposalId: proposalId });
                 });
             });
         }
     ],
 
-    // Client/Admin: Get all proposals for a specific tender
+    // Client/Admin: Get all proposals for a specific tender (R4)
     getProposalsForTender: (req, res) => {
-        const tender_id = req.params.tenderId; // From URL parameter
+        const tender_id = req.params.tenderId; 
         const currentUserId = req.user.id;
         const currentUserType = req.user.user_type;
 
-        // First, check if the user is authorized to view proposals for this tender
         Tender.getById(tender_id, (err, tenders) => {
-            if (err) {
-                console.error('Error checking tender for proposals:', err);
-                return res.status(500).send({ message: "Server error." });
-            }
-            if (tenders.length === 0) {
+            if (err || tenders.length === 0) {
                 return res.status(404).send({ message: "Tender not found." });
             }
             const tender = tenders[0];
 
-            // Only client who created the tender or an admin can view proposals for it
+            // Authorization: Client owner or Admin
             if (tender.client_id !== currentUserId && currentUserType !== 'admin') {
                 return res.status(403).send({ message: "You are not authorized to view proposals for this tender." });
             }
@@ -2369,6 +2443,7 @@ const proposalController = {
                     console.error('Error fetching proposals for tender:', err);
                     return res.status(500).send({ message: "Error fetching proposals." });
                 }
+                // R4: Proposal view includes vendor details, documents, pricing (handled by model join)
                 res.status(200).send(proposals.map(proposal => {
                     if (proposal.attachments) {
                         proposal.attachments = JSON.parse(proposal.attachments);
@@ -2378,8 +2453,53 @@ const proposalController = {
             });
         });
     },
+    
+    // Get details for a single proposal (R2, R4)
+    getProposalDetail: (req, res) => {
+        const proposalId = req.params.id;
+        const currentUserId = req.user.id;
+        const currentUserType = req.user.user_type;
 
-    // Vendor: Get all proposals submitted by the authenticated vendor
+        Proposal.getById(proposalId, (err, proposals) => {
+            if (err || proposals.length === 0) {
+                return res.status(404).send({ message: "Proposal not found." });
+            }
+
+            const proposal = proposals[0];
+
+            // 1. Admin is always authorized
+            if (currentUserType === 'admin') {
+                if (proposal.attachments) proposal.attachments = JSON.parse(proposal.attachments);
+                return res.status(200).send(proposal);
+            }
+            
+            // 2. Vendor check (must be the submitting vendor - R2)
+            if (currentUserType === 'vendor') {
+                if (proposal.vendor_id === currentUserId) {
+                    if (proposal.attachments) proposal.attachments = JSON.parse(proposal.attachments);
+                    return res.status(200).send(proposal);
+                }
+                return res.status(403).send({ message: "Forbidden: Vendors can only view their own proposals." });
+            }
+            
+            // 3. Client check (must own the associated tender - R4)
+            if (currentUserType === 'client') {
+                Tender.getById(proposal.tender_id, (tenderErr, tenders) => {
+                    if (tenderErr || tenders.length === 0 || tenders[0].client_id !== currentUserId) {
+                        return res.status(403).send({ message: "Forbidden: You do not own the tender associated with this proposal." });
+                    }
+                    
+                    if (proposal.attachments) proposal.attachments = JSON.parse(proposal.attachments);
+                    res.status(200).send(proposal);
+                });
+                return;
+            }
+
+            return res.status(403).send({ message: "Unauthorized role to view proposal details." });
+        });
+    },
+
+    // Vendor: Get all proposals submitted by the authenticated vendor (R2, R7)
     getVendorProposals: (req, res) => {
         const vendor_id = req.user.id;
         Proposal.findByVendorId(vendor_id, (err, proposals) => {
@@ -2387,79 +2507,101 @@ const proposalController = {
                 console.error('Error fetching vendor proposals:', err);
                 return res.status(500).send({ message: "Error fetching your proposals." });
             }
+            
             res.status(200).send(proposals.map(proposal => {
                 if (proposal.attachments) {
                     proposal.attachments = JSON.parse(proposal.attachments);
                 }
-                return proposal;
+                return proposal; 
             }));
         });
     },
 
-    // Client/Admin: Update proposal status (accept/reject)
+    // Client/Admin/Vendor: Update proposal status (R3, R5, R6)
     updateProposalStatus: (req, res) => {
         const proposalId = req.params.id;
-        const { status } = req.body; // Expected status: 'accepted', 'rejected'
+        const { status } = req.body; 
         const currentUserId = req.user.id;
         const currentUserType = req.user.user_type;
 
-        if (!status || !['accepted', 'rejected','shortlisted'].includes(status)) {
-            return res.status(400).send({ message: "Invalid status provided. Must be 'accepted' or 'rejected' or 'shortlisted'." });
+        // Note: 'accepted' = Awarded
+        const VALID_STATUSES = ['accepted', 'rejected', 'shortlisted', 'withdrawn', 'viewed']; 
+        if (!status || !VALID_STATUSES.includes(status)) {
+            return res.status(400).send({ 
+                message: `Invalid status provided. Must be one of: ${VALID_STATUSES.join(', ')}.` 
+            });
         }
 
-        // Verify authorization: Only the client who owns the tender or an admin can change proposal status
         Proposal.getById(proposalId, (err, proposals) => {
-            if (err) {
-                console.error('Error fetching proposal for status update:', err);
-                return res.status(500).send({ message: "Server error." });
-            }
-            if (proposals.length === 0) {
+            if (err || proposals.length === 0) {
                 return res.status(404).send({ message: "Proposal not found." });
             }
             const proposal = proposals[0];
 
             Tender.getById(proposal.tender_id, (err, tenders) => {
-                if (err) {
-                    console.error('Error fetching tender for proposal status update:', err);
-                    return res.status(500).send({ message: "Server error." });
-                }
-                if (tenders.length === 0) {
+                if (err || tenders.length === 0) {
                     return res.status(404).send({ message: "Associated tender not found." });
                 }
                 const tender = tenders[0];
-
-                if (tender.client_id !== currentUserId && currentUserType !== 'admin') {
-                    return res.status(403).send({ message: "You are not authorized to update this proposal's status." });
+                
+                // --- Authorization Logic ---
+                
+                if (currentUserType === 'vendor') {
+                    // R3: Vendor Withdrawal Check
+                    if (proposal.vendor_id !== currentUserId) {
+                        return res.status(403).send({ message: "Forbidden: Vendors can only update the status of their own proposals." });
+                    }
+                    if (status !== 'withdrawn') {
+                        return res.status(403).send({ message: "Forbidden: Vendors are only permitted to change the status to 'withdrawn'." });
+                    }
+                    // Implement deadline check for withdrawal
+                    if (tender.deadline && new Date(tender.deadline) < new Date()) {
+                         return res.status(403).send({ message: "Cannot withdraw proposal: The tender deadline has passed." });
+                    }
+                
+                } else if (currentUserType === 'client') {
+                    // R5, R6: Client Evaluation Check
+                    if (tender.client_id !== currentUserId) {
+                        return res.status(403).send({ message: "Forbidden: You are not authorized to update proposals for this tender." });
+                    }
+                    // Clients cannot use 'withdrawn' status
+                    if (status === 'withdrawn') {
+                         return res.status(400).send({ message: "Bad Request: Clients cannot use the 'withdrawn' status." });
+                    }
+                
+                } else if (currentUserType !== 'admin') {
+                    return res.status(403).send({ message: "Unauthorized role for this operation." });
                 }
-
+                
+                // --- Update the Proposal Status ---
                 Proposal.update(proposalId, { status }, (err, result) => {
                     if (err) {
                         console.error('Error updating proposal status:', err);
                         return res.status(500).send({ message: "Error updating proposal status." });
                     }
-                    if (result.affectedRows === 0) {
-                        return res.status(404).send({ message: "Proposal not found for update." });
-                    }
 
-                       
-                     // --- NEW: Notify Vendor of Proposal Status Update ---
-                let statusMessage;
-                if (status === 'shortlisted') {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been shortlisted!`;
-                } else if (status === 'accepted') {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been accepted (Awarded)!`;
-                } else {
-                    statusMessage = `Your proposal for tender "${tender.title}" has been rejected.`;
-                }
-                
-                Notification.create({
-                    user_id: proposal.vendor_id,
-                    type: `proposal_status_${status}`,
-                    message: statusMessage,
-                    reference_id: proposalId
-                }, (notifErr) => {
-                    if (notifErr) console.warn('Failed to create vendor status notification:', notifErr);
-                });
+                    // 5. Notify Vendor of Proposal Status Update
+                    let statusMessage;
+                    if (status === 'shortlisted') {
+                        statusMessage = `Your proposal for tender "${tender.title}" has been shortlisted.`;
+                    } else if (status === 'accepted') {
+                        statusMessage = `Congratulations! Your proposal for tender "${tender.title}" has been accepted (Awarded)!`;
+                    } else if (status === 'rejected') {
+                         statusMessage = `Your proposal for tender "${tender.title}" has been rejected.`;
+                    } else if (status === 'withdrawn') {
+                        statusMessage = `You successfully withdrew your proposal for tender "${tender.title}".`;
+                    } else { // viewed, etc.
+                         statusMessage = `The status of your proposal for tender "${tender.title}" was updated to: ${status}.`;
+                    }
+                    
+                    Notification.create({
+                        user_id: proposal.vendor_id,
+                        type: `proposal_status_${status}`,
+                        message: statusMessage,
+                        reference_id: proposalId
+                    }, (notifErr) => {
+                        if (notifErr) console.warn('Failed to create vendor status notification:', notifErr);
+                    });
 
 
                     res.status(200).send({ message: `Proposal status updated to ${status} successfully!` });
@@ -2468,9 +2610,7 @@ const proposalController = {
         });
     },
 
-    // --- NEW ADMIN FUNCTION ---
-    
-    // Admin: View all proposals submitted on the platform
+    // Admin: View all proposals submitted on the platform (R8)
     getAllProposalsAdmin: (req, res) => {
         Proposal.getAll((err, proposals) => { 
             if (err) {
@@ -2491,16 +2631,11 @@ const proposalController = {
         const proposalId = req.params.id;
 
         Proposal.getById(proposalId, (err, proposals) => {
-            if (err) {
-                console.error('Error fetching proposal for admin deletion:', err);
-                return res.status(500).send({ message: "Error fetching proposal." });
-            }
-            if (proposals.length === 0) {
+            if (err || proposals.length === 0) {
                 return res.status(404).send({ message: "Proposal not found." });
             }
             const proposal = proposals[0];
 
-            // Optionally, delete associated files from the filesystem here
             if (proposal.attachments) {
                 try {
                     const attachments = JSON.parse(proposal.attachments);
@@ -2522,9 +2657,6 @@ const proposalController = {
                     console.error('Error admin deleting proposal:', err);
                     return res.status(500).send({ message: "Error deleting proposal." });
                 }
-                if (result.affectedRows === 0) {
-                    return res.status(404).send({ message: "Proposal not found for deletion." });
-                }
                 res.status(200).send({ message: "Proposal deleted by Admin successfully!" });
             });
         });
@@ -2532,41 +2664,6 @@ const proposalController = {
 };
 
 module.exports = proposalController;
-</file>
-
-<file path="package.json">
-{
-  "name": "backend-only-app",
-  "version": "1.0.0",
-  "description": "A backend-only application for managing items and user authentication.",
-  "main": "backend/app.js",
-  "scripts": {
-    "start": "node backend/app.js",
-    "dev": "nodemon backend/app.js"
-  },
-  "keywords": [
-    "express",
-    "mysql",
-    "auth",
-    "api"
-  ],
-  "author": "Your Name",
-  "license": "ISC",
-  "dependencies": {
-    "bcryptjs": "^3.0.2",
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.2",
-    "mysql": "^2.18.1",
-    "nodemailer": "^6.9.14"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.4"
-  }
-}
 </file>
 
 <file path="backend/app.js">
@@ -2582,7 +2679,7 @@ const userRoutes = require('./routes/userRoutes');
 const tenderRoutes = require('./routes/tenderRoutes');
 const proposalRoutes = require('./routes/proposalRoutes');
 const notificationRoutes = require('./routes/notificationRoutes'); 
-const adminRoutes = require('./routes/adminRoutes'); // NEW: For Content Management & Analytics
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const port = process.env.PORT || 7000;
@@ -2600,7 +2697,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tenders', tenderRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes); // NEW Admin Routes for Content & Analytics
+app.use('/api/admin', adminRoutes);
 
 // Simple root route (optional, for testing if server is running)
 app.get('/', (req, res) => {
