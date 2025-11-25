@@ -1,3 +1,4 @@
+
 // controllers/adminController.js
 const db = require('../config/db'); 
 const Guideline = require('../models/Guideline'); // NEW: Import Guideline model
@@ -105,10 +106,10 @@ const adminController = {
     getDashboardStats: (req, res) => {
         // Provides platform usage dashboards (e.g., active users, tenders posted, proposals submitted)
         const statsQuery = `
-            SELECT 
-                (SELECT COUNT(id) FROM users WHERE status='active') AS total_active_users,
-                (SELECT COUNT(id) FROM users WHERE user_type='client' AND status='active') AS active_clients,
-                (SELECT COUNT(id) FROM users WHERE user_type='vendor' AND status='active') AS active_vendors,
+                   SELECT 
+                (SELECT COUNT(id) FROM users) AS total_registered_users,
+                (SELECT COUNT(id) FROM users WHERE user_type='client') AS total_clients,
+                (SELECT COUNT(id) FROM users WHERE user_type='vendor') AS total_vendors,
                 (SELECT COUNT(id) FROM tenders) AS total_tenders_posted,
                 (SELECT COUNT(id) FROM tenders WHERE status='active') AS tenders_currently_active,
                 (SELECT COUNT(id) FROM proposals) AS total_proposals_submitted;
