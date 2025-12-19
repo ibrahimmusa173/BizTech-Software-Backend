@@ -1,19 +1,13 @@
-const mysql = require('mysql');
+const mongoose = require('mongoose');
 
-const sqlconnect = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'practice_db',
-    multipleStatements: true
-});
-
-sqlconnect.connect((err) => {
-    if (!err) {
-        console.log('DB connection succeeded');
-    } else {
-        console.error('DB connection failed:', err.message);
+const connectDB = async () => {
+    try {
+        const conn = await mongoose.connect(process.env.MONGO_URI);
+        console.log(`MongoDB Connected: ${conn.connection.host}`);
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+        process.exit(1);
     }
-});
+};
 
-module.exports = sqlconnect;
+module.exports = connectDB;

@@ -1,12 +1,9 @@
-// backend/routes/authRoutes.js
 const express = require('express');
-const authController = require('../controllers/authController');
-
 const router = express.Router();
+const { registerUser, loginUser } = require('../controllers/authController');
 
-router.post("/register", authController.register);
-router.post("/login", authController.login);
-router.post("/forgot-password", authController.forgotPassword);
-router.post("/reset-password/:token", authController.resetPassword);
+// Public Routes
+router.post('/register', registerUser);
+router.post('/login', loginUser);
 
-module.exports = router; 
+module.exports = router;

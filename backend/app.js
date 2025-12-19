@@ -1,43 +1,37 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+const path = require('path');
 const dotenv = require('dotenv');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const cors = require('cors');
 
-dotenv.config();
+// 1. Load Env Vars (Path points to .env inside backend folder)
+dotenv.config({ path: path.join(__dirname, '.env') });
 
+const connectDB = require('./config/db');
+
+// 2. Import Route Files
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
-const tenderRoutes = require('./routes/tenderRoutes');
-const proposalRoutes = require('./routes/proposalRoutes');
-const notificationRoutes = require('./routes/notificationRoutes'); 
-const adminRoutes = require('./routes/adminRoutes');
-const guidelineRoutes = require('./routes/guidelineRoutes'); // NEW: Import guidelines route
+
+// 3. Connect to Database
+connectDB();
 
 const app = express();
-const port = process.env.PORT || 7000;
 
-// Middleware
-app.use(bodyParser.json());
-app.use(cors());
+// --- SECURITY MIDDLEWARE (OWASP Top 10) ---
+app.use(helmet());           // Set security headers
+app.use(express.json());     // JSON Body parser
+app.use(mongoSanitize());    // Prevent NoSQL Injection
+app.use(cors());             // Enable Cross-Origin requests
 
-// Serve static files (e.g., for attachments)
-app.use('/uploads', express.static('uploads'));
-
-// API Routes
+// --- MOUNT ROUTES ---
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/tenders', tenderRoutes);
-app.use('/api/proposals', proposalRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/guidelines', guidelineRoutes); // NEW: Guideline access route
 
-// Simple root route (optional, for testing if server is running)
-app.get('/', (req, res) => {
-    res.send('Tender Management System API is running!');
-});
+// Root route for testing
+app.get('/', (req, res) => res.send('API is running...'));
 
-// Start the server
-app.listen(port, () => console.log(`Server is running on port ${port}`));
-
-module.exports = app;
+// Start Server
+const PORT = process.env.PORT || 7000;
+app.listen(PORT, () => console.log(`Secure Server running on port ${PORT}`));

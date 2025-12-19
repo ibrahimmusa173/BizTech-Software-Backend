@@ -1,34 +1,30 @@
 const jwt = require('jsonwebtoken');
-const db = require('../config/db'); // Using db to fetch user for role check
+const User = require('../models/User');
 
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).send({ message: "Access Denied: No token provided." });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET || 'supersecretjwtkey', (err, user) => {
-        if (err) {
-            console.error("JWT Verification Error:", err.message);
-            return res.status(403).send({ message: "Access Denied: Invalid token." });
+// Protect Routes (Verify JWT)
+const protect = async (req, res, next) => {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = await User.findById(decoded.id).select('-password');
+            next();
+        } catch (error) {
+            res.status(401).json({ message: 'Not authorized, token failed' });
         }
-        req.user = user; // Attach user payload (id, email, user_type) to the request
-        next();
-    });
+    }
+    if (!token) res.status(401).json({ message: 'Not authorized, no token' });
 };
 
-const authorizeRoles = (roles) => {
+// RBAC Middleware (Role-Based Access Control)
+const authorize = (...roles) => {
     return (req, res, next) => {
-        if (!req.user || !req.user.user_type) {
-            return res.status(403).send({ message: "Access Denied: User role not found." });
-        }
-        if (!roles.includes(req.user.user_type)) {
-            return res.status(403).send({ message: `Access Denied: You must be one of the following roles: ${roles.join(', ')}.` });
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ message: `Role ${req.user.role} is not authorized to access this route` });
         }
         next();
     };
 };
 
-module.exports = { authenticateToken, authorizeRoles };
+module.exports = { protect, authorize };
